@@ -318,3 +318,10 @@ secrets.*
 - 每完成一个 Job 的远程部署测试并验证通过后必须提交测试结果
 - 禁止将多个不相关的改动合并为一个 commit
 - 提交前必须执行 `git status` 确认改动范围，避免误提交敏感信息（数据库密码等）
+
+**自动化提交规则（Claude Code 自主执行）：**
+- Claude Code 在每完成一个完整的功能块（如"数据模型全部创建完成"、"某个 Job 编译通过"）后，自行执行 `git add` + `git commit` + `git push` 三步操作，无需等待用户手动确认
+- push 操作仅使用 `git push`（不带 --force），如遇冲突则报告用户处理
+- CLAUDE.md 文件不提交（已在 .gitignore 中排除）
+- 提交信息使用中文描述，末尾附带 `Co-Authored-By` 签名
+- 每次提交前检查文件列表，确认不含敏感配置（config.properties、application.yml 带真实密码的文件）
