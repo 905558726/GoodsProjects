@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>电商数据仓库可视化</title>
+    <style>
+        * { margin:0; padding:0; box-sizing:border-box; }
+        body { display:flex; font-family:'Microsoft YaHei',sans-serif; }
+        .sidebar { width:200px; min-height:100vh; background:#1a1a2e; color:#eee; flex-shrink:0; }
+        .sidebar h4 { padding:20px 16px 10px; color:#e94560; }
+        .sidebar a { display:block; padding:12px 20px; color:#ccc; text-decoration:none; border-left:3px solid transparent; font-size:14px; }
+        .sidebar a:hover, .sidebar a.active { background:#16213e; color:#fff; border-left-color:#e94560; }
+        .main { flex:1; padding:20px 30px; background:#f5f6fa; min-height:100vh; }
+        .card { border:none; border-radius:10px; box-shadow:0 2px 10px rgba(0,0,0,.06); margin-bottom:20px; background:#fff; }
+        .card-header { background:#fff; border-bottom:1px solid #eee; font-weight:bold; padding:12px 15px; border-radius:10px 10px 0 0; }
+        .kpi-box { background:#fff; border-radius:10px; padding:20px; text-align:center; box-shadow:0 2px 10px rgba(0,0,0,.06); }
+        .kpi-box .num { font-size:28px; font-weight:bold; color:#e94560; }
+        .kpi-box .label { color:#888; margin-top:5px; font-size:13px; }
+    </style>
+</head>
+<body>
+<div class="sidebar" id="sidebar"></div>
+<div class="main" id="content">
+    <h5 style="margin-bottom:20px">电商数据仓库概览</h5>
+    <div style="display:flex;gap:15px;margin-bottom:20px">
+        <div class="kpi-box" style="flex:1"><div class="num" id="kpiSales">-</div><div class="label">总销售额 (元)</div></div>
+        <div class="kpi-box" style="flex:1"><div class="num" id="kpiOrders" style="color:#0f3460">-</div><div class="label">总销量 (件)</div></div>
+        <div class="kpi-box" style="flex:1"><div class="num" id="kpiUsers" style="color:#16c79a">-</div><div class="label">活跃用户数</div></div>
+        <div class="kpi-box" style="flex:1"><div class="num" id="kpiSku" style="color:#e7b012">-</div><div class="label">动销SKU数</div></div>
+    </div>
+    <div style="display:flex;gap:15px">
+        <div class="card" style="flex:1"><div class="card-header">品类营收分布</div><div id="chartPie" style="height:320px"></div></div>
+        <div class="card" style="flex:1"><div class="card-header">近7天销售趋势</div><div id="chartTrend" style="height:320px"></div></div>
+    </div>
+</div>
+<script src="https://cdn.jsdelivr.net/npm/echarts@5.5.0/dist/echarts.min.js"></script>
+<script>
+// Sidebar
+document.getElementById('sidebar').innerHTML = '<h4>DW可视化</h4>'+
+['仪表盘','品类营收','销售趋势','用户价值','商品排行','区域销售'].map(function(n,i){
+  var p=['/','/category-revenue','/daily-sales-trend','/user-value','/product-ranking','/regional-sales'][i];
+  return '<a href="'+p+'"'+(location.pathname===p?' class="active"':'')+'>'+n+'</a>';
+}).join('');
+// KPIs
+fetch('/api/ads/dashboard-kpi').then(r=>r.json()).then(d=>{
+    document.getElementById('kpiSales').innerText = Number(d.totalSalesAmount||0).toLocaleString();
+    document.getElementById('kpiOrders').innerText = d.totalOrderCount||0;
+    document.getElementById('kpiUsers').innerText = d.activeUserCount||0;
+    document.getElementById('kpiSku').innerText = d.activeSkuCount||0;
+});
+var p=echarts.init(document.getElementById('chartPie')),t=echarts.init(document.getElementById('chartTrend'));
+fetch('/api/ads/category-revenue').then(r=>r.json()).then(d=>{
+    p.setOption({tooltip:{trigger:'item'},series:[{type:'pie',radius:['40%','70%'],data:d.map(x=>({name:x.category,value:x.totalAmount}))}]});
+});
+var today=new Date().toISOString().slice(0,10), ago=new Date(Date.now()-7*864e5).toISOString().slice(0,10);
+fetch('/api/ads/daily-sales-trend?startDate='+ago+'&endDate='+today).then(r=>r.json()).then(d=>{
+    t.setOption({tooltip:{trigger:'axis'},xAxis:{type:'category',data:d.map(x=>x.dt)},yAxis:{type:'value'},series:[{type:'line',data:d.map(x=>x.totalSalesAmount),smooth:true,areaStyle:{}}]});
+});
+</script>
+</body>
+</html>
