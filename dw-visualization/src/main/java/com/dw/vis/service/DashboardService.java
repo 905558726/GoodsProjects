@@ -96,9 +96,12 @@ public class DashboardService {
     public List<GoodsInfo> getGoodsInfo(String category, String brand, String keyword, Integer page, Integer size) {
         QueryWrapper<GoodsInfo> qw = new QueryWrapper<>();
         qw.eq("is_active", 1);
-        if (category != null && !category.isEmpty()) qw.eq("first_category_name", category);
-        if (brand != null && !brand.isEmpty()) qw.eq("brand_name", brand);
-        if (keyword != null && !keyword.isEmpty()) qw.and(w -> w.like("spu_name", keyword).or().like("sku_name", keyword));
+        if (category != null && !category.isEmpty()) qw.eq("first_category_name", sanitize(category));
+        if (brand != null && !brand.isEmpty()) qw.eq("brand_name", sanitize(brand));
+        if (keyword != null && !keyword.isEmpty()) {
+            String kw = sanitize(keyword);
+            qw.and(w -> w.like("spu_name", kw).or().like("sku_name", kw));
+        }
         qw.orderByDesc("dw_create_time");
         if (page != null && size != null && page > 0 && size > 0) {
             qw.last("LIMIT " + size + " OFFSET " + ((page - 1) * size));
@@ -109,9 +112,12 @@ public class DashboardService {
     public long getGoodsInfoCount(String category, String brand, String keyword) {
         QueryWrapper<GoodsInfo> qw = new QueryWrapper<>();
         qw.eq("is_active", 1);
-        if (category != null && !category.isEmpty()) qw.eq("first_category_name", category);
-        if (brand != null && !brand.isEmpty()) qw.eq("brand_name", brand);
-        if (keyword != null && !keyword.isEmpty()) qw.and(w -> w.like("spu_name", keyword).or().like("sku_name", keyword));
+        if (category != null && !category.isEmpty()) qw.eq("first_category_name", sanitize(category));
+        if (brand != null && !brand.isEmpty()) qw.eq("brand_name", sanitize(brand));
+        if (keyword != null && !keyword.isEmpty()) {
+            String kw = sanitize(keyword);
+            qw.and(w -> w.like("spu_name", kw).or().like("sku_name", kw));
+        }
         return goodsInfoMapper.selectCount(qw);
     }
 
@@ -125,5 +131,22 @@ public class DashboardService {
         QueryWrapper<GoodsInfo> qw = new QueryWrapper<>();
         qw.select("DISTINCT brand_name").eq("is_active", 1).orderByAsc("brand_name");
         return goodsInfoMapper.selectList(qw).stream().map(GoodsInfo::getBrandName).collect(Collectors.toList());
+    }
+
+    /**
+     * 输入清洗: 去除SQL特殊字符，防止注入
+     */
+    private String sanitize(String input) {
+        if (input == null || input.isEmpty()) return input;
+        return input
+                .replace("'", "''")
+                .replace("\\", "\\\\")
+                .replace("\"", "\\\"")
+                .replace(";", "")
+                .replace("--", "")
+                .replace("/*", "")
+                .replace("*/", "")
+                .replace("%", "\\%")
+                .trim();
     }
 }
