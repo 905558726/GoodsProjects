@@ -19,6 +19,7 @@ public class DashboardService {
     @Autowired private UserValueMapper        userValueMapper;
     @Autowired private ProductRankingMapper   productRankingMapper;
     @Autowired private RegionalSalesMapper    regionalSalesMapper;
+    @Autowired private GoodsInfoMapper        goodsInfoMapper;
 
     // ---- 品类营收 ----
     public List<CategoryRevenue> getCategoryRevenue() {
@@ -89,5 +90,30 @@ public class DashboardService {
         // 动销 SKU
         kpi.setActiveSkuCount(productRankingMapper.selectCount(null));
         return kpi;
+    }
+
+    // ---- 商品库 ----
+    public List<GoodsInfo> getGoodsInfo(String category, Integer page, Integer size) {
+        QueryWrapper<GoodsInfo> qw = new QueryWrapper<>();
+        qw.eq("is_active", 1);
+        if (category != null && !category.isEmpty()) qw.eq("first_category_name", category);
+        qw.orderByDesc("dw_create_time");
+        if (page != null && size != null && page > 0 && size > 0) {
+            qw.last("LIMIT " + size + " OFFSET " + ((page - 1) * size));
+        }
+        return goodsInfoMapper.selectList(qw);
+    }
+
+    public long getGoodsInfoCount(String category) {
+        QueryWrapper<GoodsInfo> qw = new QueryWrapper<>();
+        qw.eq("is_active", 1);
+        if (category != null && !category.isEmpty()) qw.eq("first_category_name", category);
+        return goodsInfoMapper.selectCount(qw);
+    }
+
+    public List<String> getGoodsCategories() {
+        QueryWrapper<GoodsInfo> qw = new QueryWrapper<>();
+        qw.select("DISTINCT first_category_name").eq("is_active", 1).orderByAsc("first_category_name");
+        return goodsInfoMapper.selectList(qw).stream().map(GoodsInfo::getFirstCategoryName).collect(Collectors.toList());
     }
 }

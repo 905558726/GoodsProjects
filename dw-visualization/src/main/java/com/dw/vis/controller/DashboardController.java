@@ -5,8 +5,7 @@ import com.dw.vis.service.DashboardService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 @RestController
 @RequestMapping("/api/ads")
@@ -15,9 +14,7 @@ public class DashboardController {
     @Autowired private DashboardService dashboardService;
 
     @GetMapping("/category-revenue")
-    public List<CategoryRevenue> getCategoryRevenue() {
-        return dashboardService.getCategoryRevenue();
-    }
+    public List<CategoryRevenue> getCategoryRevenue() { return dashboardService.getCategoryRevenue(); }
 
     @GetMapping("/daily-sales-trend")
     public List<DailySalesTrend> getDailySalesTrend(
@@ -32,9 +29,7 @@ public class DashboardController {
     }
 
     @GetMapping("/user-value-distribution")
-    public Map<String, Long> getUserValueDistribution() {
-        return dashboardService.getUserTierDistribution();
-    }
+    public Map<String, Long> getUserValueDistribution() { return dashboardService.getUserTierDistribution(); }
 
     @GetMapping("/product-ranking")
     public List<ProductRanking> getProductRanking(
@@ -49,7 +44,18 @@ public class DashboardController {
     }
 
     @GetMapping("/dashboard-kpi")
-    public DashboardKpi getDashboardKpi() {
-        return dashboardService.getDashboardKpi();
+    public DashboardKpi getDashboardKpi() { return dashboardService.getDashboardKpi(); }
+
+    // ---- 商品库 ----
+    @GetMapping("/goods-info")
+    public Map<String, Object> getGoodsInfo(
+            @RequestParam(name = "category", required = false) String category,
+            @RequestParam(name = "page", defaultValue = "1") Integer page,
+            @RequestParam(name = "size", defaultValue = "20") Integer size) {
+        Map<String, Object> result = new HashMap<>();
+        result.put("data", dashboardService.getGoodsInfo(category, page, size));
+        result.put("total", dashboardService.getGoodsInfoCount(category));
+        result.put("categories", dashboardService.getGoodsCategories());
+        return result;
     }
 }

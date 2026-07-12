@@ -43,4 +43,10 @@ public class PageController {
     public String regionalSales() {
         return "regional-sales";
     }
+
+    @GetMapping("/goods-info")
+    public String goodsInfo(Model model) {
+        model.addAttribute("categories", dashboardService.getGoodsCategories());
+        return "goods-info";
+    }
 }
