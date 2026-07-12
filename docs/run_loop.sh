@@ -8,7 +8,7 @@ echo $$ > /tmp/pipeline_loop.pid
 
 while true; do
   /opt/flink-jobs/run_data_pipeline.sh
-  SLEEP=$((RANDOM % 31 + 30))
+  SLEEP=$((RANDOM % 11 + 5))
   echo "$(date) Next run in ${SLEEP}s..."
   sleep $SLEEP
 done
