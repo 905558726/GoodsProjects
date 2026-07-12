@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="zh-CN">
+<html lang="zh-CN" xmlns:th="http://www.thymeleaf.org">
 <head><meta charset="UTF-8"><title>商品库</title>
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
@@ -20,7 +20,6 @@ body{display:flex;font-family:'Microsoft YaHei','PingFang SC',sans-serif;backgro
 .btn{padding:8px 20px;border:none;border-radius:6px;font-size:13px;cursor:pointer;transition:all .2s;font-weight:500}
 .btn-primary{background:#e94560;color:#fff}
 .btn-primary:hover{background:#d63852}
-.btn-outline{background:#fff;color:#666;border:1px solid #ddd}
 .result-info{font-size:13px;color:#999;margin-left:auto}
 .table-card{background:#fff;border-radius:12px;box-shadow:0 2px 12px rgba(0,0,0,.04);overflow:hidden}
 table{width:100%;border-collapse:collapse}
@@ -38,9 +37,19 @@ tr:hover td{background:#fafbfd}
 .pagination button.active{background:#e94560;color:#fff;border-color:#e94560}
 .pagination button:disabled{color:#ccc;cursor:default;background:#f8f8f8}
 .pagination .page-info{font-size:13px;color:#999;margin-left:12px}
+.pagination input[type=number]{width:60px;padding:6px 8px;border:1px solid #ddd;border-radius:6px;font-size:13px;text-align:center}
 </style></head>
 <body>
-<div class="sidebar" id="sidebar"></div>
+<div class="sidebar">
+    <h4>DW可视化</h4>
+    <a href="/">仪表盘</a>
+    <a href="/category-revenue">品类营收</a>
+    <a href="/daily-sales-trend">销售趋势</a>
+    <a href="/user-value">用户价值</a>
+    <a href="/product-ranking">商品排行</a>
+    <a href="/regional-sales">区域销售</a>
+    <a href="/goods-info" class="active">商品库</a>
+</div>
 <div class="main">
 <div class="page-header"><h4>商品库</h4><span id="updateTime" style="font-size:12px;color:#999;margin-left:12px"></span></div>
 
@@ -59,31 +68,81 @@ tr:hover td{background:#fafbfd}
 <div class="pagination" id="pager"></div>
 </div>
 </div>
+
 <script>
-document.getElementById('sidebar').innerHTML='<h4>DW可视化</h4>'+['仪表盘','品类营收','销售趋势','用户价值','商品排行','区域销售','商品库'].map(function(n,i){var p=['/','/category-revenue','/daily-sales-trend','/user-value','/product-ranking','/regional-sales','/goods-info'][i];return'<a href="'+p+'"'+(location.pathname===p?' class="active"':'')+'>'+n+'</a>'}).join('');
+var cur=1, size=15, cat='', bd='', kw='', initDone=false;
 
-var cur=1, size=15, cat='', bd='', kw='';
-
-function doFilter(){cat=document.getElementById('categoryFilter').value;bd=document.getElementById('brandFilter').value;kw=document.getElementById('keywordInput').value;load(1)}
-function load(p){
-  cur=p; document.getElementById('updateTime').innerText='更新: '+new Date().toLocaleTimeString();
-  var u='/api/ads/goods-info?page='+p+'&size='+size; if(cat)u+='&category='+encodeURIComponent(cat); if(bd)u+='&brand='+encodeURIComponent(bd); if(kw)u+='&keyword='+encodeURIComponent(kw);
-  fetch(u).then(function(r){return r.json()}).then(function(d){
-    document.getElementById('totalCount').innerText=d.total;
-    var h=''; d.data.forEach(function(x){h+='<tr><td>'+x.skuName+'</td><td>'+x.spuName+'</td><td>'+x.brandName+'</td><td>'+x.firstCategoryName+'</td><td>'+(x.secondCategoryName||'-')+'</td><td class="price">'+(x.skuPrice||0).toFixed(2)+'</td><td class="price-range">'+(x.priceMin||0).toFixed(0)+' ~ '+(x.priceMax||0).toFixed(0)+'</td><td><span class="badge '+(x.isActive===1?'badge-active':'')+'">'+(x.isActive===1?'在售':'下架')+'</span></td></tr>'});
-    document.getElementById('goodsBody').innerHTML=h||'<tr><td colspan="8" style="text-align:center;padding:40px;color:#999">暂无数据</td></tr>';
-    var tp=Math.ceil(d.total/size),pg='';
-    pg+='<button onclick="load(1)"'+(cur<=1?' disabled':'')+'>首页</button><button onclick="load('+(cur-1)+')"'+(cur<=1?' disabled':'')+'>上一页</button>';
-    for(var i=Math.max(1,cur-3);i<=Math.min(tp,cur+3);i++)pg+='<button class="'+(i===cur?'active':'')+'" onclick="load('+i+')">'+i+'</button>';
-    pg+='<button onclick="load('+(cur+1)+')"'+(cur>=tp?' disabled':'')+'>下一页</button><button onclick="load('+tp+')"'+(cur>=tp?' disabled':'')+'>末页</button>';
-    pg+='<span class="page-info">第'+cur+'/'+tp+'页</span>';
-    pg+='<input type="number" min="1" max="'+tp+'" placeholder="跳转" style="width:60px;padding:6px 8px;border:1px solid #ddd;border-radius:6px;font-size:13px;text-align:center" onkeydown="if(event.key==='"'"'Enter'"'"'){var v=parseInt(this.value);if(v>=1&&v<='+tp+')load(v)}"><button onclick="var v=parseInt(this.previousSibling.value);if(v>=1&&v<='+tp+')load(v)" style="padding:6px 10px;border:1px solid #ddd;border-radius:6px;background:#f8f8f8;cursor:pointer;font-size:13px;color:#555">跳转</button>';
-    document.getElementById('pager').innerHTML=pg;
-    if(!d._initDone){d.categories.forEach(function(c){var o=document.createElement('option');o.value=c;o.text=c;document.getElementById('categoryFilter').appendChild(o)});d.brands.forEach(function(b){var o=document.createElement('option');o.value=b;o.text=b;document.getElementById('brandFilter').appendChild(o)});d._initDone=true}
-  });
+function doFilter(){
+    cat=document.getElementById('categoryFilter').value;
+    bd=document.getElementById('brandFilter').value;
+    kw=document.getElementById('keywordInput').value;
+    load(1);
 }
-document.getElementById('keywordInput').addEventListener('keydown',function(e){if(e.key==='Enter')doFilter()});
+
+function load(p){
+    cur=p;
+    document.getElementById('updateTime').innerText = '更新: '+new Date().toLocaleTimeString();
+    var u = '/api/ads/goods-info?page='+p+'&size='+size;
+    if(cat) u += '&category='+encodeURIComponent(cat);
+    if(bd) u += '&brand='+encodeURIComponent(bd);
+    if(kw) u += '&keyword='+encodeURIComponent(kw);
+    fetch(u).then(function(r){return r.json()}).then(function(d){
+        document.getElementById('totalCount').innerText = d.total;
+        var h = '';
+        if(d.data && d.data.length>0){
+            d.data.forEach(function(x){
+                h += '<tr><td>'+x.skuName+'</td><td>'+x.spuName+'</td><td>'+x.brandName+'</td><td>'+x.firstCategoryName+'</td><td>'+(x.secondCategoryName||'-')+'</td><td class="price">'+(x.skuPrice||0).toFixed(2)+'</td><td class="price-range">'+(x.priceMin||0).toFixed(0)+' ~ '+(x.priceMax||0).toFixed(0)+'</td><td><span class="badge '+(x.isActive===1?'badge-active':'')+'">'+(x.isActive===1?'在售':'下架')+'</span></td></tr>';
+            });
+        } else {
+            h = '<tr><td colspan="8" style="text-align:center;padding:40px;color:#999">暂无数据</td></tr>';
+        }
+        document.getElementById('goodsBody').innerHTML = h;
+
+        var tp = Math.ceil(d.total/size) || 1;
+        var pg = '';
+        pg += '<button onclick="load(1)"'+(cur<=1?' disabled':'')+'>首页</button>';
+        pg += '<button onclick="load('+(cur-1)+')"'+(cur<=1?' disabled':'')+'>上一页</button>';
+        for(var i=Math.max(1,cur-3); i<=Math.min(tp,cur+3); i++){
+            pg += '<button class="'+(i===cur?'active':'')+'" onclick="load('+i+')">'+i+'</button>';
+        }
+        pg += '<button onclick="load('+(cur+1)+')"'+(cur>=tp?' disabled':'')+'>下一页</button>';
+        pg += '<button onclick="load('+tp+')"'+(cur>=tp?' disabled':'')+'>末页</button>';
+        pg += '<span class="page-info">第'+cur+'/'+tp+'页</span>';
+        pg += '<input type="number" id="pageInput" min="1" max="'+tp+'" placeholder="跳转">';
+        pg += '<button onclick="goPage()">跳转</button>';
+        document.getElementById('pager').innerHTML = pg;
+
+        // 初始化下拉框
+        if(!initDone && d.categories && d.brands){
+            d.categories.forEach(function(c){
+                var o = document.createElement('option');
+                o.value=c; o.text=c;
+                document.getElementById('categoryFilter').appendChild(o);
+            });
+            d.brands.forEach(function(b){
+                var o = document.createElement('option');
+                o.value=b; o.text=b;
+                document.getElementById('brandFilter').appendChild(o);
+            });
+            initDone = true;
+        }
+    });
+}
+
+function goPage(){
+    var inp = document.getElementById('pageInput');
+    if(!inp) return;
+    var v = parseInt(inp.value);
+    var tp = Math.ceil(parseInt(document.getElementById('totalCount').innerText.replace(/,/g,''))/size) || 1;
+    if(v>=1 && v<=tp) load(v);
+}
+
+document.getElementById('keywordInput').addEventListener('keydown', function(e){
+    if(e.key==='Enter') doFilter();
+});
+
 load(1);
+setInterval(function(){ load(cur); }, 5000);
 </script>
 </body>
 </html>
