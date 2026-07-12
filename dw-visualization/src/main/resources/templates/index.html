@@ -21,15 +21,13 @@ body{display:flex;font-family:'Microsoft YaHei','PingFang SC',sans-serif;backgro
 .btn-primary{background:#e94560;color:#fff}.btn-primary:hover{background:#d63852}
 .result-info{font-size:13px;color:#999;margin-left:auto}
 .table-card{background:#fff;border-radius:12px;box-shadow:0 2px 12px rgba(0,0,0,.04);overflow:hidden}
-table{width:100%;border-collapse:collapse}
-thead{background:#f8f9fc}
+table{width:100%;border-collapse:collapse}thead{background:#f8f9fc}
 th{padding:14px 16px;font-size:13px;font-weight:600;color:#555;text-align:left;border-bottom:2px solid #eee;white-space:nowrap}
 td{padding:14px 16px;font-size:13px;color:#333;border-bottom:1px solid #f0f0f0}
 tr:hover td{background:#fafbfd}
 .badge{display:inline-block;padding:3px 10px;border-radius:12px;font-size:11px;font-weight:500}
 .badge-active{background:#e8f8f0;color:#16c79a}
-.price{color:#e94560;font-weight:600}
-.price-range{color:#999;font-size:12px}
+.price{color:#e94560;font-weight:600}.price-range{color:#999;font-size:12px}
 .pagination{display:flex;align-items:center;gap:4px;padding:16px 20px;border-top:1px solid #f0f0f0}
 .pagination button{padding:7px 14px;border:1px solid #e0e0e0;border-radius:6px;background:#fff;cursor:pointer;font-size:13px;color:#555;transition:all .15s}
 .pagination button:hover:not(:disabled):not(.active){border-color:#e94560;color:#e94560}
@@ -47,170 +45,58 @@ tr:hover td{background:#fafbfd}
 <script>
 var PAGES=['仪表盘','品类营收','销售趋势','用户价值','商品排行','区域销售','商品库'];
 var PATHS=['/','/category-revenue','/daily-sales-trend','/user-value','/product-ranking','/regional-sales','/goods-info'];
-var curPage=0;
+var curPage=0, lastRender=-1;
 
-// 构建侧边栏
-function buildSidebar(){
+(function init(){
   var h='<h4>DW可视化</h4>';
-  for(var i=0;i<PAGES.length;i++){
-    h+='<a onclick="nav('+i+')" id="s'+i+'">'+PAGES[i]+'</a>';
-  }
+  for(var i=0;i<PAGES.length;i++)h+='<a onclick="nav('+i+')" id="s'+i+'">'+PAGES[i]+'</a>';
   document.getElementById('sidebar').innerHTML=h;
-}
-
-function setSidebarActive(i){
-  for(var j=0;j<PAGES.length;j++){
-    document.getElementById('s'+j).className=(j===i)?'active':'';
-  }
-}
+  var p=0;
+  if(location.hash){var hh=location.hash.replace('#','');var idx=PATHS.indexOf(hh);if(idx>=0)p=idx}
+  else if(location.pathname!=='/'){var idx=PATHS.indexOf(location.pathname);if(idx>=0)p=idx}
+  nav(p);
+  setInterval(function(){render(curPage)},5000);
+})();
 
 function nav(i){
   curPage=i;
-  setSidebarActive(i);
-  var p=PATHS[i];
-  try{history.pushState({page:i},'',p)}catch(e){}
-  location.hash='#'+p;
+  for(var j=0;j<PAGES.length;j++){var el=document.getElementById('s'+j);if(el)el.className=(j===i)?'active':''}
+  try{history.pushState({page:i},'',PATHS[i])}catch(e){}
+  location.hash='#'+PATHS[i];
   render(i);
 }
 
 function render(i){
+  if(i===lastRender)return;lastRender=i;
   var c=document.getElementById('content');
-  if(i===0){ // 仪表盘
-    c.innerHTML='<h5 style="margin-bottom:20px">电商数据仓库概览 <span id="updateTime" style="font-size:12px;color:#999;margin-left:10px"></span></h5><div style="display:flex;gap:15px;margin-bottom:20px"><div class="kpi-box" style="flex:1"><div class="num" id="kpiSales">-</div><div class="label">总销售额 (元)</div></div><div class="kpi-box" style="flex:1"><div class="num" id="kpiOrders" style="color:#0f3460">-</div><div class="label">总销量 (件)</div></div><div class="kpi-box" style="flex:1"><div class="num" id="kpiUsers" style="color:#16c79a">-</div><div class="label">活跃用户数</div></div><div class="kpi-box" style="flex:1"><div class="num" id="kpiSku" style="color:#e7b012">-</div><div class="label">动销SKU数</div></div></div><div style="display:flex;gap:15px"><div class="card" style="flex:1"><div class="card-header">品类营收分布</div><div id="chartPie" style="height:320px"></div></div><div class="card" style="flex:1"><div class="card-header">近7天销售趋势</div><div id="chartTrend" style="height:320px"></div></div></div>';
-    loadDashboard();
-  } else if(i===1){
-    c.innerHTML='<div class="page-header"><h4>品类营收排行</h4><span id="updateTime" style="font-size:12px;color:#999;margin-left:12px"></span></div><div class="table-card"><div style="padding:15px"><div id="chartBar" style="height:450px"></div></div></div>';
-    loadCategoryRev();
-  } else if(i===2){
-    c.innerHTML='<div class="page-header"><h4 style="display:inline">每日销售趋势</h4><span id="updateTime" style="font-size:12px;color:#999;margin-left:12px"></span></div><div class="filter-card"><div class="filter-row"><label>日期</label><input type="date" id="startDate"> <span>~</span> <input type="date" id="endDate"> <button class="btn btn-primary" onclick="loadTrend()">查询</button></div></div><div class="table-card"><div style="padding:15px"><div id="chartTrend2" style="height:450px"></div></div></div>';
-    loadTrend();
-  } else if(i===3){
-    c.innerHTML='<div class="page-header"><h4>用户价值分析 (RFM)</h4><span id="updateTime" style="font-size:12px;color:#999;margin-left:12px"></span></div><div style="display:flex;gap:15px"><div class="table-card" style="flex:1"><div style="padding:15px"><div style="font-weight:bold;padding:0 0 10px">价值分层</div><div id="chartPie2" style="height:320px"></div></div></div><div class="table-card" style="flex:2"><div style="padding:15px"><div style="font-weight:bold;padding:0 0 10px">RFM散点图</div><div id="chartScatter" style="height:320px"></div></div></div></div>';
-    loadUserVal();
-  } else if(i===4){
-    c.innerHTML='<div class="page-header"><h4>商品热销排行</h4><span id="updateTime" style="font-size:12px;color:#999;margin-left:12px"></span></div><div class="filter-card"><div class="filter-row"><label>品类</label><select id="catSelRank" onchange="loadRanking()"><option value="">全部品类</option></select><label>TopN</label><select id="topSelRank" onchange="loadRanking()"><option value="10">Top10</option><option value="20">Top20</option><option value="50">Top50</option></select></div></div><div class="table-card"><div style="padding:15px"><div id="chartRank" style="height:450px"></div></div></div>';
-    loadRanking();
-  } else if(i===5){
-    c.innerHTML='<div class="page-header"><h4>区域销售分析</h4><span id="updateTime" style="font-size:12px;color:#999;margin-left:12px"></span></div><div class="filter-card"><div class="filter-row"><label>级别</label><select id="levSel" onchange="loadRegion()"><option value="province">省级汇总</option><option value="city">市级明细</option></select></div></div><div style="display:flex;gap:15px"><div class="table-card" style="flex:2"><div style="padding:15px"><div id="chartRegion" style="height:450px"></div></div></div><div class="table-card" style="flex:1"><div style="padding:15px"><div style="font-weight:bold;padding:0 0 10px">Top10</div><table style="width:100%;border-collapse:collapse"><thead><tr><th>#</th><th>省份</th><th>销售额</th><th>订单</th></tr></thead><tbody id="topList"></tbody></table></div></div></div>';
-    loadRegion();
-  } else if(i===6){
-    renderGoods();
-  }
+  if(i===0){c.innerHTML='<h5 style="margin-bottom:20px">电商数据仓库概览 <span id="uTime" style="font-size:12px;color:#999;margin-left:10px"></span></h5><div style="display:flex;gap:15px;margin-bottom:20px"><div class="kpi-box" style="flex:1"><div class="num" id="kpiS">-</div><div class="label">总销售额 (元)</div></div><div class="kpi-box" style="flex:1"><div class="num" id="kpiO" style="color:#0f3460">-</div><div class="label">总销量 (件)</div></div><div class="kpi-box" style="flex:1"><div class="num" id="kpiU" style="color:#16c79a">-</div><div class="label">活跃用户数</div></div><div class="kpi-box" style="flex:1"><div class="num" id="kpiSk" style="color:#e7b012">-</div><div class="label">动销SKU数</div></div></div><div style="display:flex;gap:15px"><div class="card" style="flex:1"><div class="card-header">品类营收分布</div><div id="cPie" style="height:320px"></div></div><div class="card" style="flex:1"><div class="card-header">近7天销售趋势</div><div id="cTrend" style="height:320px"></div></div></div>';loadDashboard();}
+  else if(i===1){c.innerHTML='<div class="page-header"><h4>品类营收排行</h4><span id="uTime" style="font-size:12px;color:#999"></span></div><div class="table-card"><div style="padding:15px"><div id="cBar" style="height:450px"></div></div></div>';loadCatRev();}
+  else if(i===2){c.innerHTML='<div class="page-header"><h4 style="display:inline">每日销售趋势</h4><span id="uTime" style="font-size:12px;color:#999;margin-left:12px"></span></div><div class="filter-card"><div class="filter-row"><label>日期</label><input type="date" id="ds"> <span>~</span> <input type="date" id="de"> <button class="btn btn-primary" onclick="loadTrend()">查询</button></div></div><div class="table-card"><div style="padding:15px"><div id="cTrend2" style="height:450px"></div></div></div>';loadTrend();}
+  else if(i===3){c.innerHTML='<div class="page-header"><h4>用户价值分析 (RFM)</h4><span id="uTime" style="font-size:12px;color:#999"></span></div><div style="display:flex;gap:15px"><div class="table-card" style="flex:1"><div style="padding:15px"><div style="font-weight:bold;padding:0 0 10px">价值分层</div><div id="cPie2" style="height:320px"></div></div></div><div class="table-card" style="flex:2"><div style="padding:15px"><div style="font-weight:bold;padding:0 0 10px">RFM散点图</div><div id="cSca" style="height:320px"></div></div></div></div>';loadUserVal();}
+  else if(i===4){c.innerHTML='<div class="page-header"><h4>商品热销排行</h4><span id="uTime" style="font-size:12px;color:#999"></span></div><div class="filter-card"><div class="filter-row"><label>品类</label><select id="catR" onchange="loadRanking()"><option value="">全部品类</option></select><label>TopN</label><select id="topR" onchange="loadRanking()"><option value="10">Top10</option><option value="20">Top20</option><option value="50">Top50</option></select></div></div><div class="table-card"><div style="padding:15px"><div id="cRank" style="height:450px"></div></div></div>';loadRanking();}
+  else if(i===5){c.innerHTML='<div class="page-header"><h4>区域销售分析</h4><span id="uTime" style="font-size:12px;color:#999"></span></div><div class="filter-card"><div class="filter-row"><label>级别</label><select id="levS" onchange="loadRegion()"><option value="province">省级汇总</option><option value="city">市级明细</option></select></div></div><div style="display:flex;gap:15px"><div class="table-card" style="flex:2"><div style="padding:15px"><div id="cReg" style="height:450px"></div></div></div><div class="table-card" style="flex:1"><div style="padding:15px"><div style="font-weight:bold;padding:0 0 10px">Top10</div><table style="width:100%;border-collapse:collapse"><thead><tr><th>#</th><th>省份</th><th>销售额</th><th>订单</th></tr></thead><tbody id="topL"></tbody></table></div></div></div>';loadRegion();}
+  else if(i===6){renderGoods();}
 }
 
-// ============ 仪表盘 ============
+// 仪表盘
 function loadDashboard(){
-  fetch('/api/ads/dashboard-kpi').then(function(r){return r.json()}).then(function(d){
-    document.getElementById('kpiSales').innerText=Number(d.totalSalesAmount||0).toLocaleString();
-    document.getElementById('kpiOrders').innerText=d.totalOrderCount||0;
-    document.getElementById('kpiUsers').innerText=d.activeUserCount||0;
-    document.getElementById('kpiSku').innerText=d.activeSkuCount||0;
-  });
-  fetch('/api/ads/category-revenue').then(function(r){return r.json()}).then(function(d){
-    echarts.init(document.getElementById('chartPie')).setOption({tooltip:{trigger:'item'},series:[{type:'pie',radius:['40%','70%'],data:d.map(function(x){return{name:x.category,value:x.totalAmount}})}]});
-  });
-  var today=new Date().toISOString().slice(0,10),ago=new Date(Date.now()-7*864e5).toISOString().slice(0,10);
-  fetch('/api/ads/daily-sales-trend?startDate='+ago+'&endDate='+today).then(function(r){return r.json()}).then(function(d){
-    echarts.init(document.getElementById('chartTrend')).setOption({tooltip:{trigger:'axis'},xAxis:{type:'category',data:d.map(function(x){return x.dt})},yAxis:{type:'value'},series:[{type:'line',data:d.map(function(x){return x.totalSalesAmount}),smooth:true,areaStyle:{}}]});
-  });
-  var el=document.getElementById('updateTime'); if(el)el.innerText='更新: '+new Date().toLocaleTimeString();
+  fetch('/api/ads/dashboard-kpi').then(r=>r.json()).then(d=>{document.getElementById('kpiS').innerText=Number(d.totalSalesAmount||0).toLocaleString();document.getElementById('kpiO').innerText=d.totalOrderCount||0;document.getElementById('kpiU').innerText=d.activeUserCount||0;document.getElementById('kpiSk').innerText=d.activeSkuCount||0});
+  fetch('/api/ads/category-revenue').then(r=>r.json()).then(d=>echarts.init(document.getElementById('cPie')).setOption({tooltip:{trigger:'item'},series:[{type:'pie',radius:['40%','70%'],data:d.map(x=>({name:x.category,value:x.totalAmount}))}]}));
+  var t=new Date().toISOString().slice(0,10),a=new Date(Date.now()-7*864e5).toISOString().slice(0,10);
+  fetch('/api/ads/daily-sales-trend?startDate='+a+'&endDate='+t).then(r=>r.json()).then(d=>echarts.init(document.getElementById('cTrend')).setOption({tooltip:{trigger:'axis'},xAxis:{type:'category',data:d.map(x=>x.dt)},yAxis:{type:'value'},series:[{type:'line',data:d.map(x=>x.totalSalesAmount),smooth:true,areaStyle:{}}]}));
+  var el=document.getElementById('uTime');if(el)el.innerText='更新: '+new Date().toLocaleTimeString();
 }
+function loadCatRev(){fetch('/api/ads/category-revenue').then(r=>r.json()).then(d=>echarts.init(document.getElementById('cBar')).setOption({tooltip:{trigger:'axis'},grid:{left:'3%',right:'12%',containLabel:true},xAxis:{type:'value'},yAxis:{type:'category',inverse:true,data:d.map(x=>x.category)},series:[{type:'bar',data:d.map((x,i)=>({value:x.totalAmount,label:{show:true,position:'right',formatter:p=>Number(p.value).toLocaleString()+' (占'+d[p.dataIndex].percentage+'%)'}})),itemStyle:{color:new echarts.graphic.LinearGradient(0,0,1,0,[{offset:0,color:'#e94560'},{offset:1,color:'#0f3460'}])}}]}));}
+function loadTrend(){var s=document.getElementById('ds'),e=document.getElementById('de');if(s&&!s.value){var t=new Date();s.value=new Date(t-90*864e5).toISOString().slice(0,10);e.value=t.toISOString().slice(0,10)}fetch('/api/ads/daily-sales-trend?startDate='+((s&&s.value)||'2026-01-01')+'&endDate='+((e&&e.value)||'2099-01-01')).then(r=>r.json()).then(d=>echarts.init(document.getElementById('cTrend2')).setOption({tooltip:{trigger:'axis'},legend:{data:['销售额','订单数']},xAxis:{type:'category',data:d.map(x=>x.dt)},yAxis:[{type:'value',name:'元'},{type:'value',name:'笔'}],series:[{name:'销售额',type:'line',data:d.map(x=>x.totalSalesAmount),smooth:true,itemStyle:{color:'#e94560'}},{name:'订单数',type:'bar',yAxisIndex:1,data:d.map(x=>x.totalOrderCount),itemStyle:{color:'#0f3460'}}]}));}
+function loadUserVal(){var col={'高价值':'#e94560','中价值':'#0f3460','低价值':'#bbb'};fetch('/api/ads/user-value-distribution').then(r=>r.json()).then(d=>echarts.init(document.getElementById('cPie2')).setOption({tooltip:{trigger:'item',formatter:'{b}: {c}人 ({d}%)'},series:[{type:'pie',radius:['45%','70%'],label:{show:true,formatter:'{b}\n{c}人'},emphasis:{label:{fontSize:18,fontWeight:'bold'}},data:Object.entries(d).map(e=>({name:e[0],value:e[1]}))}]}));fetch('/api/ads/user-value').then(r=>r.json()).then(d=>{var by={};d.forEach(x=>{var t=x.valueTier;if(!by[t])by[t]=[];by[t].push([x.orderFrequency,x.totalMonetary,x.buyerPhone||x.buyerName||''])});echarts.init(document.getElementById('cSca')).setOption({tooltip:{formatter:p=>'<b>'+p.value[2]+'</b><br/>频率: '+p.value[0]+'次<br/>金额: ¥'+Number(p.value[1]).toLocaleString()},legend:{data:Object.keys(by),bottom:0},grid:{left:60,right:30,top:20,bottom:60},xAxis:{type:'value',name:'购买频率(次)',nameLocation:'center',nameGap:35},yAxis:{type:'value',name:'累计消费(元)',nameLocation:'center',nameGap:50,axisLabel:{formatter:v=>v>=1000?(v/1000).toFixed(0)+'k':v}},dataZoom:[{type:'slider',bottom:15},{type:'inside'}],series:Object.keys(by).map(t=>({name:t,type:'scatter',symbolSize:d=>Math.sqrt(d[1]/1000)+4,data:by[t],itemStyle:{color:col[t]||'#888',opacity:.7},emphasis:{scale:2.5}}))})});}
+function loadRanking(){var cat=document.getElementById('catR'),topN=document.getElementById('topR');fetch('/api/ads/product-ranking?topN='+(topN?topN.value:'10')+(cat&&cat.value?'&category='+encodeURIComponent(cat.value):'')).then(r=>r.json()).then(d=>echarts.init(document.getElementById('cRank')).setOption({tooltip:{trigger:'axis'},grid:{left:'3%',right:'12%',containLabel:true},xAxis:{type:'value'},yAxis:{type:'category',inverse:true,data:d.map(x=>x.productName)},series:[{type:'bar',data:d.map((x,i)=>({value:x.totalQuantity,label:{show:true,position:'right',formatter:p=>'销量:'+p.value+'|'+d[p.dataIndex].category}})),itemStyle:{color:new echarts.graphic.LinearGradient(0,0,1,0,[{offset:0,color:'#e94560'},{offset:1,color:'#0f3460'}])}}]}));if(cat.options.length<=1)fetch('/api/ads/category-revenue').then(r=>r.json()).then(d=>{d.forEach(x=>{var o=document.createElement('option');o.value=x.category;o.text=x.category;cat.appendChild(o)})})}
+function loadRegion(){var l=document.getElementById('levS');fetch('/api/ads/regional-sales?level='+(l?l.value:'province')).then(r=>r.json()).then(d=>{var t=d.slice(0,10);echarts.init(document.getElementById('cReg')).setOption({tooltip:{trigger:'axis'},grid:{left:'3%',right:'8%',containLabel:true},xAxis:{type:'value',name:'销售额(元)'},yAxis:{type:'category',inverse:true,data:t.map(x=>x.province)},series:[{type:'bar',data:t.map(x=>({value:x.totalAmount,label:{show:true,position:'right',formatter:p=>Number(p.value).toLocaleString()}})),itemStyle:{color:new echarts.graphic.LinearGradient(0,0,1,0,[{offset:0,color:'#e94560'},{offset:1,color:'#0f3460'}])}}]});var h='';t.forEach((x,i)=>{h+='<tr><td>'+(i+1)+'</td><td>'+x.province+'</td><td>'+Number(x.totalAmount).toLocaleString()+'</td><td>'+x.totalOrders+'</td></tr>'});document.getElementById('topL').innerHTML=h})}
 
-// ============ 品类营收 ============
-function loadCategoryRev(){
-  fetch('/api/ads/category-revenue').then(function(r){return r.json()}).then(function(d){
-    echarts.init(document.getElementById('chartBar')).setOption({tooltip:{trigger:'axis'},grid:{left:'3%',right:'12%',containLabel:true},xAxis:{type:'value'},yAxis:{type:'category',inverse:true,data:d.map(function(x){return x.category})},series:[{type:'bar',data:d.map(function(x,i){return{value:x.totalAmount,label:{show:true,position:'right',formatter:function(p){return Number(p.value).toLocaleString()+' (占'+d[p.dataIndex].percentage+'%)'}}}}),itemStyle:{color:new echarts.graphic.LinearGradient(0,0,1,0,[{offset:0,color:'#e94560'},{offset:1,color:'#0f3460'}])}}]});
-  });
-}
-
-// ============ 销售趋势 ============
-function loadTrend(){
-  var s=document.getElementById('startDate'),e=document.getElementById('endDate');
-  if(s&&!s.value){var t=new Date();s.value=new Date(t-90*864e5).toISOString().slice(0,10);e.value=t.toISOString().slice(0,10)}
-  fetch('/api/ads/daily-sales-trend?startDate='+((s&&s.value)||'2026-01-01')+'&endDate='+((e&&e.value)||'2099-01-01')).then(function(r){return r.json()}).then(function(d){
-    echarts.init(document.getElementById('chartTrend2')).setOption({tooltip:{trigger:'axis'},legend:{data:['销售额','订单数']},xAxis:{type:'category',data:d.map(function(x){return x.dt})},yAxis:[{type:'value',name:'元'},{type:'value',name:'笔'}],series:[{name:'销售额',type:'line',data:d.map(function(x){return x.totalSalesAmount}),smooth:true,itemStyle:{color:'#e94560'}},{name:'订单数',type:'bar',yAxisIndex:1,data:d.map(function(x){return x.totalOrderCount}),itemStyle:{color:'#0f3460'}}]});
-  });
-}
-
-// ============ 用户价值 ============
-function loadUserVal(){
-  var colors={'高价值':'#e94560','中价值':'#0f3460','低价值':'#bbb'};
-  fetch('/api/ads/user-value-distribution').then(function(r){return r.json()}).then(function(d){echarts.init(document.getElementById('chartPie2')).setOption({tooltip:{trigger:'item',formatter:'{b}: {c}人 ({d}%)'},series:[{type:'pie',radius:['45%','70%'],label:{show:true,formatter:'{b}\n{c}人'},emphasis:{label:{fontSize:18,fontWeight:'bold'}},data:Object.entries(d).map(function(e){return{name:e[0],value:e[1]}})}]})});
-  fetch('/api/ads/user-value').then(function(r){return r.json()}).then(function(d){
-    var by={};
-    d.forEach(function(x){var t=x.valueTier;if(!by[t])by[t]=[];by[t].push([x.orderFrequency,x.totalMonetary,x.buyerPhone||x.buyerName||''])});
-    echarts.init(document.getElementById('chartScatter')).setOption({
-      tooltip:{formatter:function(p){return '<b>'+p.value[2]+'</b><br/>频率: '+p.value[0]+'次<br/>金额: ¥'+Number(p.value[1]).toLocaleString()}},
-      legend:{data:Object.keys(by),bottom:0},
-      grid:{left:60,right:30,top:20,bottom:60},
-      xAxis:{type:'value',name:'购买频率(次)',nameLocation:'center',nameGap:35},
-      yAxis:{type:'value',name:'累计消费(元)',nameLocation:'center',nameGap:50,axisLabel:{formatter:function(v){return v>=1000?(v/1000).toFixed(0)+'k':v}}},
-      dataZoom:[{type:'slider',bottom:15},{type:'inside'}],
-      series:Object.keys(by).map(function(t){return{name:t,type:'scatter',symbolSize:function(d){return Math.sqrt(d[1]/1000)+4},data:by[t],itemStyle:{color:colors[t]||'#888',opacity:.7},emphasis:{scale:2.5}}})
-    });
-  });
-}
-
-// ============ 商品排行 ============
-function loadRanking(){
-  var cat=document.getElementById('catSelRank').value,topN=document.getElementById('topSelRank').value;
-  fetch('/api/ads/product-ranking?topN='+topN+(cat?'&category='+encodeURIComponent(cat):'')).then(function(r){return r.json()}).then(function(d){
-    echarts.init(document.getElementById('chartRank')).setOption({tooltip:{trigger:'axis'},grid:{left:'3%',right:'12%',containLabel:true},xAxis:{type:'value'},yAxis:{type:'category',inverse:true,data:d.map(function(x){return x.productName})},series:[{type:'bar',data:d.map(function(x,i){return{value:x.totalQuantity,label:{show:true,position:'right',formatter:function(p){return'销量:'+p.value+'|'+d[p.dataIndex].category}}}}),itemStyle:{color:new echarts.graphic.LinearGradient(0,0,1,0,[{offset:0,color:'#e94560'},{offset:1,color:'#0f3460'}])}}]});
-  });
-  if(document.getElementById('catSelRank').options.length<=1) fetch('/api/ads/category-revenue').then(function(r){return r.json()}).then(function(d){var s=document.getElementById('catSelRank');d.forEach(function(x){var o=document.createElement('option');o.value=x.category;o.text=x.category;s.appendChild(o)})});
-}
-
-// ============ 区域销售 ============
-function loadRegion(){
-  fetch('/api/ads/regional-sales?level='+document.getElementById('levSel').value).then(function(r){return r.json()}).then(function(d){var t=d.slice(0,10);echarts.init(document.getElementById('chartRegion')).setOption({tooltip:{trigger:'axis'},grid:{left:'3%',right:'8%',containLabel:true},xAxis:{type:'value',name:'销售额(元)'},yAxis:{type:'category',inverse:true,data:t.map(function(x){return x.province})},series:[{type:'bar',data:t.map(function(x){return{value:x.totalAmount,label:{show:true,position:'right',formatter:function(p){return Number(p.value).toLocaleString()}}}}),itemStyle:{color:new echarts.graphic.LinearGradient(0,0,1,0,[{offset:0,color:'#e94560'},{offset:1,color:'#0f3460'}])}}]});var h='';t.forEach(function(x,i){h+='<tr><td>'+(i+1)+'</td><td>'+x.province+'</td><td>'+Number(x.totalAmount).toLocaleString()+'</td><td>'+x.totalOrders+'</td></tr>'});document.getElementById('topList').innerHTML=h});
-}
-
-// ============ 商品库 ============
+// 商品库
 var gCur=1,gSz=15,gCat='',gBd='',gKw='';
-function renderGoods(){
-  document.getElementById('content').innerHTML='<div class="page-header"><h4>商品库</h4><span id="updateTime2" style="font-size:12px;color:#999;margin-left:12px"></span></div><div class="filter-card"><div class="filter-row"><label>品类</label><select id="catFltr" onchange="doFilt()"><option value="">全部品类</option></select><label>品牌</label><select id="bdFltr" onchange="doFilt()"><option value="">全部品牌</option></select><label>商品名</label><input type="text" id="kwInp" placeholder="输入SKU或SPU名称搜索..."><button class="btn btn-primary" onclick="doFilt()">查询</button><span class="result-info">共 <strong id="totCnt" style="color:#e94560">-</strong> 个SKU</span></div></div><div class="table-card"><table><thead><tr><th>SKU名称</th><th>SPU名称</th><th>品牌</th><th>品类</th><th>子类</th><th>售价(元)</th><th>价格区间</th><th>状态</th></tr></thead><tbody id="gBody"><tr><td colspan="8" style="text-align:center;padding:40px;color:#999">加载中...</td></tr></tbody></table><div class="pagination" id="pgr"></div></div>';
-  loadG(1);
-}
-function doFilt(){gCat=document.getElementById('catFltr').value;gBd=document.getElementById('bdFltr').value;gKw=document.getElementById('kwInp').value;loadG(1)}
-function loadG(p){
-  gCur=p;var el=document.getElementById('updateTime2');if(el)el.innerText='更新: '+new Date().toLocaleTimeString();
-  var u='/api/ads/goods-info?page='+p+'&size='+gSz;if(gCat)u+='&category='+encodeURIComponent(gCat);if(gBd)u+='&brand='+encodeURIComponent(gBd);if(gKw)u+='&keyword='+encodeURIComponent(gKw);
-  fetch(u).then(function(r){return r.json()}).then(function(d){
-    document.getElementById('totCnt').innerText=d.total;
-    var h='';d.data.forEach(function(x){h+='<tr><td>'+x.skuName+'</td><td>'+x.spuName+'</td><td>'+x.brandName+'</td><td>'+x.firstCategoryName+'</td><td>'+(x.secondCategoryName||'-')+'</td><td class="price">'+(x.skuPrice||0).toFixed(2)+'</td><td class="price-range">'+(x.priceMin||0).toFixed(0)+' ~ '+(x.priceMax||0).toFixed(0)+'</td><td><span class="badge '+(x.isActive===1?'badge-active':'')+'">'+(x.isActive===1?'在售':'下架')+'</span></td></tr>'});
-    document.getElementById('gBody').innerHTML=h||'<tr><td colspan="8" style="text-align:center;padding:40px;color:#999">暂无数据</td></tr>';
-    var tp=Math.ceil(d.total/gSz),pg='';
-    pg+='<button onclick="loadG(1)"'+(gCur<=1?' disabled':'')+'>首页</button><button onclick="loadG('+(gCur-1)+')"'+(gCur<=1?' disabled':'')+'>上一页</button>';
-    for(var i=Math.max(1,gCur-3);i<=Math.min(tp,gCur+3);i++)pg+='<button class="'+(i===gCur?'active':'')+'" onclick="loadG('+i+')">'+i+'</button>';
-    pg+='<button onclick="loadG('+(gCur+1)+')"'+(gCur>=tp?' disabled':'')+'>下一页</button><button onclick="loadG('+tp+')"'+(gCur>=tp?' disabled':'')+'>末页</button>';
-    pg+='<span class="page-info">第'+gCur+'/'+tp+'页</span><input type="number" min="1" max="'+tp+'" placeholder="跳转" style="width:60px;padding:6px 8px;border:1px solid #ddd;border-radius:6px;font-size:13px;text-align:center" onkeydown="if(event.key==='+'"'"'Enter'"'"'){var v=parseInt(this.value);if(v>=1&&v<='+tp+')loadG(v)}"><button onclick="var v=parseInt(this.previousSibling.value);if(v>=1&&v<='+tp+')loadG(v)" style="padding:6px 10px;border:1px solid #ddd;border-radius:6px;background:#f8f8f8;cursor:pointer;font-size:13px;color:#555">跳转</button>';
-    document.getElementById('pgr').innerHTML=pg;
-    if(!d._gd){d.categories.forEach(function(c){var o=document.createElement('option');o.value=c;o.text=c;document.getElementById('catFltr').appendChild(o)});d.brands.forEach(function(b){var o=document.createElement('option');o.value=b;o.text=b;document.getElementById('bdFltr').appendChild(o)});d._gd=true}
-  });
-  document.getElementById('kwInp').addEventListener('keydown',function(e){if(e.key==='Enter')doFilt()});
-}
-
-// ============ 初始化 ============
-(function init(){
-  // 侧边栏直接写入 HTML (确保页面加载即显示)
-  document.getElementById('sidebar').innerHTML='<h4>DW可视化</h4>'
-    +'<a onclick="nav(0)" id="s0">仪表盘</a>'
-    +'<a onclick="nav(1)" id="s1">品类营收</a>'
-    +'<a onclick="nav(2)" id="s2">销售趋势</a>'
-    +'<a onclick="nav(3)" id="s3">用户价值</a>'
-    +'<a onclick="nav(4)" id="s4">商品排行</a>'
-    +'<a onclick="nav(5)" id="s5">区域销售</a>'
-    +'<a onclick="nav(6)" id="s6">商品库</a>';
-
-  var page=0;
-  if(location.hash){
-    var h=location.hash.replace('#','');
-    var idx=PATHS.indexOf(h);
-    if(idx>=0)page=idx;
-  }
-  nav(page);
-  setInterval(function(){render(curPage)},5000);
-})();
+function renderGoods(){document.getElementById('content').innerHTML='<div class="page-header"><h4>商品库</h4><span id="uTime2" style="font-size:12px;color:#999"></span></div><div class="filter-card"><div class="filter-row"><label>品类</label><select id="cf" onchange="doF()"><option value="">全部品类</option></select><label>品牌</label><select id="bf" onchange="doF()"><option value="">全部品牌</option></select><label>商品名</label><input type="text" id="kw" placeholder="输入SKU或SPU名称搜索..."><button class="btn btn-primary" onclick="doF()">查询</button><span class="result-info">共 <strong id="tCnt" style="color:#e94560">-</strong> 个SKU</span></div></div><div class="table-card"><table><thead><tr><th>SKU名称</th><th>SPU名称</th><th>品牌</th><th>品类</th><th>子类</th><th>售价(元)</th><th>价格区间</th><th>状态</th></tr></thead><tbody id="gb"><tr><td colspan="8" style="text-align:center;padding:40px;color:#999">加载中...</td></tr></tbody></table><div class="pagination" id="pg"></div></div>';loadG(1)}
+function doF(){gCat=document.getElementById('cf').value;gBd=document.getElementById('bf').value;gKw=document.getElementById('kw').value;loadG(1)}
+function loadG(p){gCur=p;var el=document.getElementById('uTime2');if(el)el.innerText='更新: '+new Date().toLocaleTimeString();var u='/api/ads/goods-info?page='+p+'&size='+gSz;if(gCat)u+='&category='+encodeURIComponent(gCat);if(gBd)u+='&brand='+encodeURIComponent(gBd);if(gKw)u+='&keyword='+encodeURIComponent(gKw);fetch(u).then(r=>r.json()).then(d=>{document.getElementById('tCnt').innerText=d.total;var h='';d.data.forEach(x=>{h+='<tr><td>'+x.skuName+'</td><td>'+x.spuName+'</td><td>'+x.brandName+'</td><td>'+x.firstCategoryName+'</td><td>'+(x.secondCategoryName||'-')+'</td><td class="price">'+(x.skuPrice||0).toFixed(2)+'</td><td class="price-range">'+(x.priceMin||0).toFixed(0)+' ~ '+(x.priceMax||0).toFixed(0)+'</td><td><span class="badge '+(x.isActive===1?'badge-active':'')+'">'+(x.isActive===1?'在售':'下架')+'</span></td></tr>'});document.getElementById('gb').innerHTML=h||'<tr><td colspan="8" style="text-align:center;padding:40px;color:#999">暂无数据</td></tr>';var tp=Math.ceil(d.total/gSz),pg='';pg+='<button onclick="loadG(1)"'+(gCur<=1?' disabled':'')+'>首页</button><button onclick="loadG('+(gCur-1)+')"'+(gCur<=1?' disabled':'')+'>上一页</button>';for(var i=Math.max(1,gCur-3);i<=Math.min(tp,gCur+3);i++)pg+='<button class="'+(i===gCur?'active':'')+'" onclick="loadG('+i+')">'+i+'</button>';pg+='<button onclick="loadG('+(gCur+1)+')"'+(gCur>=tp?' disabled':'')+'>下一页</button><button onclick="loadG('+tp+')"'+(gCur>=tp?' disabled':'')+'>末页</button>';pg+='<span class="page-info">第'+gCur+'/'+tp+'页</span><input type="number" min="1" max="'+tp+'" placeholder="跳转" style="width:60px;padding:6px 8px;border:1px solid #ddd;border-radius:6px;font-size:13px;text-align:center" onkeydown="if(event.key==='Enter'){var v=parseInt(this.value);if(v>=1&&v<='+tp+')loadG(v)}"><button onclick="var v=parseInt(this.previousSibling.value);if(v>=1&&v<='+tp+')loadG(v)" style="padding:6px 10px;border:1px solid #ddd;border-radius:6px;background:#f8f8f8;cursor:pointer;font-size:13px;color:#555">跳转</button>';document.getElementById('pg').innerHTML=pg;if(!d._gd){d.categories.forEach(c=>{var o=document.createElement('option');o.value=c;o.text=c;document.getElementById('cf').appendChild(o)});d.brands.forEach(b=>{var o=document.createElement('option');o.value=b;o.text=b;document.getElementById('bf').appendChild(o)});d._gd=true}});document.getElementById('kw').addEventListener('keydown',function(e){if(e.key==='Enter')doF()})}
 </script>
 </body>
 </html>
