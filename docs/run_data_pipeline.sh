@@ -1,7 +1,7 @@
 #!/bin/bash
 # ==============================================================================
-# 电商数仓端到端数据管道 — Flink 集群提交模式
-# 日志: /opt/flink-jobs/pipeline.log
+# 电商数仓端到端数据管道 — Flink 集群常驻模式
+# 数据生成后立即触发 DWS/ADS 链路处理
 # ==============================================================================
 set -e
 LOG_FILE="/opt/flink-jobs/pipeline.log"
@@ -19,18 +19,19 @@ exec >> "$LOG_FILE" 2>&1
 echo
 echo "=== $(date '+%Y-%m-%d %H:%M:%S') START: P=$PC O=$OC ==="
 
-echo "[1/4] Generate"
+echo "[1/4] Generate -> Kafka"
 cd "$GEN"
 $PY scripts/product_generator.py --output kafka://localhost:9092/ods_products_data --count "$PC" | tail -1
 $PY scripts/order_generator.py --output kafka://localhost:9092/ods_orders_data --count "$OC" | tail -1
 
-echo "[2/4] ODS->DWD (flink run)"
-$FLINK run -c com.dw.job.OdsToDwdJob "$JAR" --kafka localhost:9092 --db jdbc:postgresql://localhost:5432/DataWarehouse 2>&1 | grep -E 'Products|Orders|FINISHED|Error'
+# ODS->DWD 已作为 Flink Streaming Job 常驻运行，数据自动消费
+# 等待几秒确保数据已被消费
+sleep 8
 
-echo "[3/4] DWD->DWS (flink run)"
+echo "[2/4] DWD->DWS (flink run)"
 $FLINK run -c com.dw.job.DwdToDwsJob "$JAR" 2>&1 | grep -E 'rows|done|Error'
 
-echo "[4/4] DWS->ADS (flink run)"
+echo "[3/4] DWS->ADS (flink run)"
 $FLINK run -c com.dw.job.DwsToAdsJob "$JAR" 2>&1 | grep -E 'rows|done'
 
 echo "=== $(date '+%Y-%m-%d %H:%M:%S') DONE ==="
