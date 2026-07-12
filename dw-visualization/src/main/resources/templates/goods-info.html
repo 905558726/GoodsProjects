@@ -77,6 +77,7 @@ function load(p){
     for(var i=Math.max(1,cur-3);i<=Math.min(tp,cur+3);i++)pg+='<button class="'+(i===cur?'active':'')+'" onclick="load('+i+')">'+i+'</button>';
     pg+='<button onclick="load('+(cur+1)+')"'+(cur>=tp?' disabled':'')+'>下一页</button><button onclick="load('+tp+')"'+(cur>=tp?' disabled':'')+'>末页</button>';
     pg+='<span class="page-info">第'+cur+'/'+tp+'页</span>';
+    pg+='<input type="number" min="1" max="'+tp+'" placeholder="跳转" style="width:60px;padding:6px 8px;border:1px solid #ddd;border-radius:6px;font-size:13px;text-align:center" onkeydown="if(event.key==='"'"'Enter'"'"'){var v=parseInt(this.value);if(v>=1&&v<='+tp+')load(v)}"><button onclick="var v=parseInt(this.previousSibling.value);if(v>=1&&v<='+tp+')load(v)" style="padding:6px 10px;border:1px solid #ddd;border-radius:6px;background:#f8f8f8;cursor:pointer;font-size:13px;color:#555">跳转</button>';
     document.getElementById('pager').innerHTML=pg;
     if(!d._initDone){d.categories.forEach(function(c){var o=document.createElement('option');o.value=c;o.text=c;document.getElementById('categoryFilter').appendChild(o)});d.brands.forEach(function(b){var o=document.createElement('option');o.value=b;o.text=b;document.getElementById('brandFilter').appendChild(o)});d._initDone=true}
   });
