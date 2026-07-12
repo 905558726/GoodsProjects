@@ -134,9 +134,21 @@ function loadTrend(){
 
 // ============ 用户价值 ============
 function loadUserVal(){
-  var colors={'高价值':'#e94560','中价值':'#0f3460','低价值':'#ccc'};
-  fetch('/api/ads/user-value-distribution').then(function(r){return r.json()}).then(function(d){echarts.init(document.getElementById('chartPie2')).setOption({tooltip:{trigger:'item'},series:[{type:'pie',radius:'60%',data:Object.entries(d).map(function(e){return{name:e[0],value:e[1]}})}]})});
-  fetch('/api/ads/user-value').then(function(r){return r.json()}).then(function(d){var by={};d.forEach(function(x){var t=x.valueTier;if(!by[t])by[t]=[];by[t].push([x.orderFrequency,x.totalMonetary,x.buyerPhone])});echarts.init(document.getElementById('chartScatter')).setOption({tooltip:{formatter:function(p){return p.value[2]+': freq='+p.value[0]+' amount='+Number(p.value[1]).toLocaleString()}},xAxis:{type:'value',name:'购买频率'},yAxis:{type:'value',name:'累计消费(元)'},series:Object.keys(by).map(function(t){return{name:t,type:'scatter',symbolSize:8,data:by[t],itemStyle:{color:colors[t]||'#888'}}})})});
+  var colors={'高价值':'#e94560','中价值':'#0f3460','低价值':'#bbb'};
+  fetch('/api/ads/user-value-distribution').then(function(r){return r.json()}).then(function(d){echarts.init(document.getElementById('chartPie2')).setOption({tooltip:{trigger:'item',formatter:'{b}: {c}人 ({d}%)'},series:[{type:'pie',radius:['45%','70%'],label:{show:true,formatter:'{b}\n{c}人'},emphasis:{label:{fontSize:18,fontWeight:'bold'}},data:Object.entries(d).map(function(e){return{name:e[0],value:e[1]}})}]})});
+  fetch('/api/ads/user-value').then(function(r){return r.json()}).then(function(d){
+    var by={};
+    d.forEach(function(x){var t=x.valueTier;if(!by[t])by[t]=[];by[t].push([x.orderFrequency,x.totalMonetary,x.buyerPhone||x.buyerName||''])});
+    echarts.init(document.getElementById('chartScatter')).setOption({
+      tooltip:{formatter:function(p){return '<b>'+p.value[2]+'</b><br/>频率: '+p.value[0]+'次<br/>金额: ¥'+Number(p.value[1]).toLocaleString()}},
+      legend:{data:Object.keys(by),bottom:0},
+      grid:{left:60,right:30,top:20,bottom:60},
+      xAxis:{type:'value',name:'购买频率(次)',nameLocation:'center',nameGap:35},
+      yAxis:{type:'value',name:'累计消费(元)',nameLocation:'center',nameGap:50,axisLabel:{formatter:function(v){return v>=1000?(v/1000).toFixed(0)+'k':v}}},
+      dataZoom:[{type:'slider',bottom:15},{type:'inside'}],
+      series:Object.keys(by).map(function(t){return{name:t,type:'scatter',symbolSize:function(d){return Math.sqrt(d[1]/1000)+4},data:by[t],itemStyle:{color:colors[t]||'#888',opacity:.7},emphasis:{scale:2.5}}})
+    });
+  });
 }
 
 // ============ 商品排行 ============
@@ -179,15 +191,26 @@ function loadG(p){
 }
 
 // ============ 初始化 ============
-buildSidebar();
-var page=0;
-if(location.hash){
-  var h=location.hash.replace('#','');
-  var idx=PATHS.indexOf(h);
-  if(idx>=0)page=idx;
-}
-nav(page);
-setInterval(function(){render(curPage)},5000);
+(function init(){
+  // 侧边栏直接写入 HTML (确保页面加载即显示)
+  document.getElementById('sidebar').innerHTML='<h4>DW可视化</h4>'
+    +'<a onclick="nav(0)" id="s0">仪表盘</a>'
+    +'<a onclick="nav(1)" id="s1">品类营收</a>'
+    +'<a onclick="nav(2)" id="s2">销售趋势</a>'
+    +'<a onclick="nav(3)" id="s3">用户价值</a>'
+    +'<a onclick="nav(4)" id="s4">商品排行</a>'
+    +'<a onclick="nav(5)" id="s5">区域销售</a>'
+    +'<a onclick="nav(6)" id="s6">商品库</a>';
+
+  var page=0;
+  if(location.hash){
+    var h=location.hash.replace('#','');
+    var idx=PATHS.indexOf(h);
+    if(idx>=0)page=idx;
+  }
+  nav(page);
+  setInterval(function(){render(curPage)},5000);
+})();
 </script>
 </body>
 </html>
