@@ -1,6 +1,6 @@
 #!/bin/bash
 # ==============================================================================
-# 电商数仓端到端数据管道
+# 电商数仓端到端数据管道 — 模拟用户下单随机性
 # 资源约束: 1.6GB 内存 / 2 核, 串行执行避免压崩服务
 # 日志: /opt/flink-jobs/pipeline.log
 # ==============================================================================
@@ -10,9 +10,10 @@ JAR="/opt/flink-jobs/flink-data-warehouse.jar"
 PY="/opt/DataGenerate/venv/bin/python"
 GEN="/opt/DataGenerate"
 
-# 少量数据: 商品 2~8, 订单 5~25, 避免 Kafka 堆积和 DB 压力
-PC=$((RANDOM % 7 + 2))
-OC=$((RANDOM % 21 + 5))
+# 随机商品 5~15, 订单为商品数的 50%~100%(至少1)
+PC=$((RANDOM % 11 + 5))
+OC=$((PC / 2 + RANDOM % (PC / 2 + 1)))
+((OC < 1)) && OC=1
 
 exec >> "$LOG_FILE" 2>&1
 echo
@@ -25,14 +26,11 @@ $PY scripts/order_generator.py --output kafka://localhost:9092/ods_orders_data -
 
 echo "[2/4] ODS->DWD"
 java -Xmx256M -cp "$JAR" com.dw.job.OdsToDwdJob | tail -1
-
-# 每个 Job 结束后等待 5s 释放内存
-sleep 5
+sleep 3
 
 echo "[3/4] DWD->DWS"
 java -Xmx256M -cp "$JAR" com.dw.job.DwdToDwsJob | tail -4
-
-sleep 5
+sleep 3
 
 echo "[4/4] DWS->ADS"
 java -Xmx256M -cp "$JAR" com.dw.job.DwsToAdsJob | tail -5
