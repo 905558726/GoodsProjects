@@ -93,10 +93,12 @@ public class DashboardService {
     }
 
     // ---- 商品库 ----
-    public List<GoodsInfo> getGoodsInfo(String category, Integer page, Integer size) {
+    public List<GoodsInfo> getGoodsInfo(String category, String brand, String keyword, Integer page, Integer size) {
         QueryWrapper<GoodsInfo> qw = new QueryWrapper<>();
         qw.eq("is_active", 1);
         if (category != null && !category.isEmpty()) qw.eq("first_category_name", category);
+        if (brand != null && !brand.isEmpty()) qw.eq("brand_name", brand);
+        if (keyword != null && !keyword.isEmpty()) qw.and(w -> w.like("spu_name", keyword).or().like("sku_name", keyword));
         qw.orderByDesc("dw_create_time");
         if (page != null && size != null && page > 0 && size > 0) {
             qw.last("LIMIT " + size + " OFFSET " + ((page - 1) * size));
@@ -104,10 +106,12 @@ public class DashboardService {
         return goodsInfoMapper.selectList(qw);
     }
 
-    public long getGoodsInfoCount(String category) {
+    public long getGoodsInfoCount(String category, String brand, String keyword) {
         QueryWrapper<GoodsInfo> qw = new QueryWrapper<>();
         qw.eq("is_active", 1);
         if (category != null && !category.isEmpty()) qw.eq("first_category_name", category);
+        if (brand != null && !brand.isEmpty()) qw.eq("brand_name", brand);
+        if (keyword != null && !keyword.isEmpty()) qw.and(w -> w.like("spu_name", keyword).or().like("sku_name", keyword));
         return goodsInfoMapper.selectCount(qw);
     }
 
@@ -115,5 +119,11 @@ public class DashboardService {
         QueryWrapper<GoodsInfo> qw = new QueryWrapper<>();
         qw.select("DISTINCT first_category_name").eq("is_active", 1).orderByAsc("first_category_name");
         return goodsInfoMapper.selectList(qw).stream().map(GoodsInfo::getFirstCategoryName).collect(Collectors.toList());
+    }
+
+    public List<String> getGoodsBrands() {
+        QueryWrapper<GoodsInfo> qw = new QueryWrapper<>();
+        qw.select("DISTINCT brand_name").eq("is_active", 1).orderByAsc("brand_name");
+        return goodsInfoMapper.selectList(qw).stream().map(GoodsInfo::getBrandName).collect(Collectors.toList());
     }
 }

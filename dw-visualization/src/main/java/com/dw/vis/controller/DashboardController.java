@@ -50,12 +50,15 @@ public class DashboardController {
     @GetMapping("/goods-info")
     public Map<String, Object> getGoodsInfo(
             @RequestParam(name = "category", required = false) String category,
+            @RequestParam(name = "brand", required = false) String brand,
+            @RequestParam(name = "keyword", required = false) String keyword,
             @RequestParam(name = "page", defaultValue = "1") Integer page,
             @RequestParam(name = "size", defaultValue = "20") Integer size) {
         Map<String, Object> result = new HashMap<>();
-        result.put("data", dashboardService.getGoodsInfo(category, page, size));
-        result.put("total", dashboardService.getGoodsInfoCount(category));
+        result.put("data", dashboardService.getGoodsInfo(category, brand, keyword, page, size));
+        result.put("total", dashboardService.getGoodsInfoCount(category, brand, keyword));
         result.put("categories", dashboardService.getGoodsCategories());
+        result.put("brands", dashboardService.getGoodsBrands());
         return result;
     }
 }

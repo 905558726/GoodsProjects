@@ -1,48 +1,88 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head><meta charset="UTF-8"><title>商品库</title>
-<style>*{margin:0;padding:0;box-sizing:border-box}body{display:flex;font-family:'Microsoft YaHei',sans-serif}.sidebar{width:200px;min-height:100vh;background:#1a1a2e;color:#eee;flex-shrink:0}.sidebar h4{padding:20px 16px 10px;color:#e94560}.sidebar a{display:block;padding:12px 20px;color:#ccc;text-decoration:none;border-left:3px solid transparent;font-size:14px}.sidebar a:hover,.sidebar a.active{background:#16213e;color:#fff;border-left-color:#e94560}.main{flex:1;padding:20px 30px;background:#f5f6fa;min-height:100vh}.card{border:none;border-radius:10px;box-shadow:0 2px 10px rgba(0,0,0,.06);background:#fff;padding:15px;margin-bottom:20px}table{width:100%;border-collapse:collapse}th,td{padding:8px 12px;border-bottom:1px solid #eee;font-size:13px;text-align:left}th{background:#f8f9fa;font-weight:bold}.pagination{display:flex;gap:10px;align-items:center;margin-top:15px}.pagination button{padding:6px 12px;border:1px solid #ddd;border-radius:4px;background:#fff;cursor:pointer}.pagination button:hover{background:#e94560;color:#fff;border-color:#e94560}.pagination button.active{background:#e94560;color:#fff}.search-bar{display:flex;align-items:center;gap:10px;margin-bottom:20px}.search-bar select{padding:6px 12px;border:1px solid #ddd;border-radius:4px;font-size:14px}.badge{display:inline-block;padding:2px 8px;border-radius:10px;font-size:11px;background:#16c79a;color:#fff}</style></head>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{display:flex;font-family:'Microsoft YaHei','PingFang SC',sans-serif;background:#f0f2f5}
+.sidebar{width:200px;min-height:100vh;background:linear-gradient(180deg,#1a1a2e 0%,#16213e 100%);color:#eee;flex-shrink:0;position:sticky;top:0}
+.sidebar h4{padding:24px 20px 16px;color:#e94560;font-size:16px;letter-spacing:1px}
+.sidebar a{display:flex;align-items:center;padding:14px 20px;color:#b0b0c0;text-decoration:none;border-left:3px solid transparent;font-size:14px;transition:all .2s}
+.sidebar a:hover,.sidebar a.active{background:rgba(233,69,96,.1);color:#fff;border-left-color:#e94560}
+.main{flex:1;padding:24px 30px;min-height:100vh}
+.page-header{margin-bottom:20px}
+.page-header h4{font-size:20px;color:#1a1a2e;display:inline}
+.filter-card{background:#fff;border-radius:12px;padding:20px 24px;margin-bottom:20px;box-shadow:0 2px 12px rgba(0,0,0,.04)}
+.filter-row{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.filter-row label{font-size:13px;color:#666;white-space:nowrap}
+.filter-row select,.filter-row input{padding:8px 12px;border:1px solid #e0e0e0;border-radius:6px;font-size:13px;color:#333;background:#fafafa;transition:border-color .2s}
+.filter-row select:focus,.filter-row input:focus{outline:none;border-color:#e94560;background:#fff}
+.filter-row input{width:200px}
+.btn{padding:8px 20px;border:none;border-radius:6px;font-size:13px;cursor:pointer;transition:all .2s;font-weight:500}
+.btn-primary{background:#e94560;color:#fff}
+.btn-primary:hover{background:#d63852}
+.btn-outline{background:#fff;color:#666;border:1px solid #ddd}
+.result-info{font-size:13px;color:#999;margin-left:auto}
+.table-card{background:#fff;border-radius:12px;box-shadow:0 2px 12px rgba(0,0,0,.04);overflow:hidden}
+table{width:100%;border-collapse:collapse}
+thead{background:#f8f9fc}
+th{padding:14px 16px;font-size:13px;font-weight:600;color:#555;text-align:left;border-bottom:2px solid #eee;white-space:nowrap}
+td{padding:14px 16px;font-size:13px;color:#333;border-bottom:1px solid #f0f0f0}
+tr:hover td{background:#fafbfd}
+.badge{display:inline-block;padding:3px 10px;border-radius:12px;font-size:11px;font-weight:500}
+.badge-active{background:#e8f8f0;color:#16c79a}
+.price{color:#e94560;font-weight:600}
+.price-range{color:#999;font-size:12px}
+.pagination{display:flex;align-items:center;gap:4px;padding:16px 20px;border-top:1px solid #f0f0f0}
+.pagination button{padding:7px 14px;border:1px solid #e0e0e0;border-radius:6px;background:#fff;cursor:pointer;font-size:13px;color:#555;transition:all .15s}
+.pagination button:hover:not(:disabled):not(.active){border-color:#e94560;color:#e94560}
+.pagination button.active{background:#e94560;color:#fff;border-color:#e94560}
+.pagination button:disabled{color:#ccc;cursor:default;background:#f8f8f8}
+.pagination .page-info{font-size:13px;color:#999;margin-left:12px}
+</style></head>
 <body>
 <div class="sidebar" id="sidebar"></div>
 <div class="main">
-<h5 style="margin-bottom:15px">商品库 (dim_goods_info) <span id="updateTime" style="font-size:12px;color:#999;margin-left:10px"></span></h5>
-<div class="search-bar">
-<strong>品类:</strong>
-<select id="categoryFilter" onchange="loadPage(1)"><option value="">全部</option></select>
-<span style="margin-left:20px;color:#888">共 <span id="totalCount">-</span> 个SKU</span>
+<div class="page-header"><h4>商品库</h4><span id="updateTime" style="font-size:12px;color:#999;margin-left:12px"></span></div>
+
+<div class="filter-card">
+<div class="filter-row">
+<label>品类</label><select id="categoryFilter" onchange="doFilter()"><option value="">全部品类</option></select>
+<label>品牌</label><select id="brandFilter" onchange="doFilter()"><option value="">全部品牌</option></select>
+<label>商品名</label><input type="text" id="keywordInput" placeholder="输入SKU或SPU名称搜索...">
+<button class="btn btn-primary" onclick="doFilter()">查询</button>
+<span class="result-info">共 <strong id="totalCount" style="color:#e94560">-</strong> 个SKU</span>
 </div>
-<div class="card">
-<table><thead><tr><th>SKU ID</th><th>SPU名称</th><th>品牌</th><th>品类</th><th>价格</th><th>状态</th></tr></thead><tbody id="goodsBody"></tbody></table>
+</div>
+
+<div class="table-card">
+<table><thead><tr><th>SKU名称</th><th>SPU名称</th><th>品牌</th><th>品类</th><th>子类</th><th>售价(元)</th><th>价格区间</th><th>状态</th></tr></thead><tbody id="goodsBody"><tr><td colspan="8" style="text-align:center;padding:40px;color:#999">加载中...</td></tr></tbody></table>
 <div class="pagination" id="pager"></div>
 </div>
 </div>
 <script>
 document.getElementById('sidebar').innerHTML='<h4>DW可视化</h4>'+['仪表盘','品类营收','销售趋势','用户价值','商品排行','区域销售','商品库'].map(function(n,i){var p=['/','/category-revenue','/daily-sales-trend','/user-value','/product-ranking','/regional-sales','/goods-info'][i];return'<a href="'+p+'"'+(location.pathname===p?' class="active"':'')+'>'+n+'</a>'}).join('');
 
-var currentPage=1,pageSize=20,category='';
-function loadPage(p){
-  currentPage=p;
-  document.getElementById('updateTime').innerText='更新: '+new Date().toLocaleTimeString();
-  var url='/api/ads/goods-info?page='+p+'&size='+pageSize+(category?'&category='+encodeURIComponent(category):'');
-  fetch(url).then(function(r){return r.json()}).then(function(d){
+var cur=1, size=15, cat='', bd='', kw='';
+
+function doFilter(){cat=document.getElementById('categoryFilter').value;bd=document.getElementById('brandFilter').value;kw=document.getElementById('keywordInput').value;load(1)}
+function load(p){
+  cur=p; document.getElementById('updateTime').innerText='更新: '+new Date().toLocaleTimeString();
+  var u='/api/ads/goods-info?page='+p+'&size='+size; if(cat)u+='&category='+encodeURIComponent(cat); if(bd)u+='&brand='+encodeURIComponent(bd); if(kw)u+='&keyword='+encodeURIComponent(kw);
+  fetch(u).then(function(r){return r.json()}).then(function(d){
     document.getElementById('totalCount').innerText=d.total;
-    var h=''; d.data.forEach(function(x){
-      h+='<tr><td style="font-size:11px;color:#666">'+x.skuId+'</td><td>'+x.spuName+'</td><td>'+x.brandName+'</td><td>'+x.firstCategoryName+(x.secondCategoryName?'/'+x.secondCategoryName:'')+'</td><td style="color:#e94560;font-weight:bold">'+(x.skuPrice||0).toFixed(2)+'</td><td><span class="badge">'+(x.isActive===1?'在售':'下架')+'</span></td></tr>';
-    });
-    document.getElementById('goodsBody').innerHTML=h;
-    var totalPages=Math.ceil(d.total/pageSize),pg='';
-    for(var i=1;i<=totalPages;i++) pg+='<button class="'+(i===currentPage?'active':'')+'" onclick="loadPage('+i+')">'+i+'</button>';
+    var h=''; d.data.forEach(function(x){h+='<tr><td>'+x.skuName+'</td><td>'+x.spuName+'</td><td>'+x.brandName+'</td><td>'+x.firstCategoryName+'</td><td>'+(x.secondCategoryName||'-')+'</td><td class="price">'+(x.skuPrice||0).toFixed(2)+'</td><td class="price-range">'+(x.priceMin||0).toFixed(0)+' ~ '+(x.priceMax||0).toFixed(0)+'</td><td><span class="badge '+(x.isActive===1?'badge-active':'')+'">'+(x.isActive===1?'在售':'下架')+'</span></td></tr>'});
+    document.getElementById('goodsBody').innerHTML=h||'<tr><td colspan="8" style="text-align:center;padding:40px;color:#999">暂无数据</td></tr>';
+    var tp=Math.ceil(d.total/size),pg='';
+    pg+='<button onclick="load(1)"'+(cur<=1?' disabled':'')+'>首页</button><button onclick="load('+(cur-1)+')"'+(cur<=1?' disabled':'')+'>上一页</button>';
+    for(var i=Math.max(1,cur-3);i<=Math.min(tp,cur+3);i++)pg+='<button class="'+(i===cur?'active':'')+'" onclick="load('+i+')">'+i+'</button>';
+    pg+='<button onclick="load('+(cur+1)+')"'+(cur>=tp?' disabled':'')+'>下一页</button><button onclick="load('+tp+')"'+(cur>=tp?' disabled':'')+'>末页</button>';
+    pg+='<span class="page-info">第'+cur+'/'+tp+'页</span>';
     document.getElementById('pager').innerHTML=pg;
-    // init category dropdown once
-    if(document.getElementById('categoryFilter').options.length<=1){
-      var sel=document.getElementById('categoryFilter');
-      d.categories.forEach(function(c){var o=document.createElement('option');o.value=c;o.text=c;sel.appendChild(o)});
-    }
+    if(!d._initDone){d.categories.forEach(function(c){var o=document.createElement('option');o.value=c;o.text=c;document.getElementById('categoryFilter').appendChild(o)});d.brands.forEach(function(b){var o=document.createElement('option');o.value=b;o.text=b;document.getElementById('brandFilter').appendChild(o)});d._initDone=true}
   });
 }
-document.getElementById('categoryFilter').addEventListener('change',function(){category=this.value;loadPage(1)});
-loadPage(1);
-setInterval(function(){loadPage(currentPage)},30000);
+document.getElementById('keywordInput').addEventListener('keydown',function(e){if(e.key==='Enter')doFilter()});
+load(1);
 </script>
 </body>
 </html>
