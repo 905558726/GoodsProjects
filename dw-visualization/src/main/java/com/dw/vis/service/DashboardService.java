@@ -74,14 +74,16 @@ public class DashboardService {
     // ---- 仪表盘 KPI ----
     public DashboardKpi getDashboardKpi() {
         DashboardKpi kpi = new DashboardKpi();
-        // 总销售额
-        CategoryRevenue cr = categoryRevenueMapper.selectOne(
-                new QueryWrapper<CategoryRevenue>().select("COALESCE(SUM(total_amount),0) as totalAmount"));
-        kpi.setTotalSalesAmount(cr != null ? cr.getTotalAmount() : BigDecimal.ZERO);
-        // 总订单数
-        ProductRanking pr = productRankingMapper.selectOne(
-                new QueryWrapper<ProductRanking>().select("COALESCE(SUM(total_quantity),0) as totalQuantity"));
-        kpi.setTotalOrderCount(pr != null ? pr.getTotalQuantity() : 0L);
+        // 总销售额 — 取所有 daily_sales_trend 的 totalSalesAmount 求和
+        List<DailySalesTrend> trends = dailySalesTrendMapper.selectList(null);
+        BigDecimal salesSum = BigDecimal.ZERO;
+        long orderSum = 0L;
+        for (DailySalesTrend t : trends) {
+            if (t.getTotalSalesAmount() != null) salesSum = salesSum.add(t.getTotalSalesAmount());
+            if (t.getTotalOrderCount() != null) orderSum += t.getTotalOrderCount();
+        }
+        kpi.setTotalSalesAmount(salesSum);
+        kpi.setTotalOrderCount(orderSum);
         // 活跃用户
         kpi.setActiveUserCount(userValueMapper.selectCount(null));
         // 动销 SKU
