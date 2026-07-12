@@ -163,6 +163,8 @@ function loadG(p){
 // ========== 路由初始化 ==========
 var page=0;
 if(location.hash){var h=location.hash.substring(1); var idx=PATHS.indexOf(h); if(idx>=0)page=idx}
+// 默认展示仪表盘
+if(!location.hash){location.hash='#/';page=0}
 render(page);
 // 自动刷新
 setInterval(function(){render(page)},5000);
