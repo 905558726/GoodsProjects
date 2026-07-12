@@ -30,7 +30,7 @@ public class DwdToDwsJob {
         String dbPass = cfg.getProperty("db.password");
 
         StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
-        env.setParallelism(1);
+        env.setParallelism(2);
         env.getCheckpointConfig().setCheckpointInterval(60_000); // 60s
 
         DataStream<Integer> ticks = env.addSource(new TickingSource(30_000)).name("tick-source").uid("tick-source");
