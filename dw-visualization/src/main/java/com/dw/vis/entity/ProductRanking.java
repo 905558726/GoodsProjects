@@ -5,7 +5,7 @@ import lombok.Data;
 import java.math.BigDecimal;
 
 @Data
-@TableName("ads.ads_product_ranking")
+@TableName(value = "ads.ads_product_ranking", autoResultMap = true)
 public class ProductRanking {
     private String     productId;
     private String     productName;

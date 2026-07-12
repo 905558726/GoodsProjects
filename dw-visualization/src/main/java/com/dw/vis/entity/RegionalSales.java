@@ -5,7 +5,7 @@ import lombok.Data;
 import java.math.BigDecimal;
 
 @Data
-@TableName("ads.ads_regional_sales")
+@TableName(value = "ads.ads_regional_sales", autoResultMap = true)
 public class RegionalSales {
     private String     province;
     private String     city;

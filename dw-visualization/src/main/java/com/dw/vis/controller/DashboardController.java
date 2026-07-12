@@ -21,13 +21,13 @@ public class DashboardController {
 
     @GetMapping("/daily-sales-trend")
     public List<DailySalesTrend> getDailySalesTrend(
-            @RequestParam(required = false) String startDate,
-            @RequestParam(required = false) String endDate) {
+            @RequestParam(name = "startDate", required = false) String startDate,
+            @RequestParam(name = "endDate", required = false) String endDate) {
         return dashboardService.getDailySalesTrend(startDate, endDate);
     }
 
     @GetMapping("/user-value")
-    public List<UserValue> getUserValue(@RequestParam(required = false) String valueTier) {
+    public List<UserValue> getUserValue(@RequestParam(name = "valueTier", required = false) String valueTier) {
         return dashboardService.getUserValue(valueTier);
     }
 
@@ -38,13 +38,13 @@ public class DashboardController {
 
     @GetMapping("/product-ranking")
     public List<ProductRanking> getProductRanking(
-            @RequestParam(defaultValue = "10") Integer topN,
-            @RequestParam(required = false) String category) {
+            @RequestParam(name = "topN", defaultValue = "10") Integer topN,
+            @RequestParam(name = "category", required = false) String category) {
         return dashboardService.getProductRanking(topN, category);
     }
 
     @GetMapping("/regional-sales")
-    public List<RegionalSales> getRegionalSales(@RequestParam(defaultValue = "province") String level) {
+    public List<RegionalSales> getRegionalSales(@RequestParam(name = "level", defaultValue = "province") String level) {
         return dashboardService.getRegionalSales(level);
     }
 
