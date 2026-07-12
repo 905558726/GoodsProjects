@@ -28,9 +28,11 @@ public class DashboardService {
 
     // ---- 每日销售趋势 ----
     public List<DailySalesTrend> getDailySalesTrend(String startDate, String endDate) {
+        if (startDate == null || startDate.isEmpty()) startDate = "2026-01-01";
+        if (endDate == null || endDate.isEmpty()) endDate = "2099-01-01";
         QueryWrapper<DailySalesTrend> qw = new QueryWrapper<>();
-        if (startDate != null && !startDate.isEmpty()) qw.ge("dt", startDate);
-        if (endDate != null && !endDate.isEmpty())     qw.le("dt", endDate);
+        qw.apply("dt >= {0}::date", startDate);
+        qw.apply("dt <= {0}::date", endDate);
         qw.orderByAsc("dt");
         return dailySalesTrendMapper.selectList(qw);
     }
