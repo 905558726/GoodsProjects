@@ -57,8 +57,7 @@ public class DwdToDwsJob {
                 + "COALESCE(o.created_at,NOW()), COALESCE(o.created_at,NOW())::date, NOW() "
                 + "FROM dwd.dwd_order_item oi "
                 + "LEFT JOIN dwd.dwd_order o ON oi.order_id = o.order_id "
-                + "ON CONFLICT (order_id, product_id) DO UPDATE SET "
-                + "buyer_name=EXCLUDED.buyer_name, buyer_phone=EXCLUDED.buyer_phone, load_time=NOW()";
+                + "ON CONFLICT (order_id, product_id) DO NOTHING";
         Statement st = c.createStatement();
         int rows = st.executeUpdate(sql);
         st.close();
