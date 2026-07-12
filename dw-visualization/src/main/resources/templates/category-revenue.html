@@ -39,7 +39,7 @@ function refresh(){
                 xAxis:{type:'value'},
                 yAxis:{type:'category',inverse:true,data:d.map(function(x){return x.category})},
                 series:[{type:'bar',data:d.map(function(x,i){return{value:x.totalAmount,label:{show:true,position:'right',formatter:function(p){return Number(p.value).toLocaleString()+' (占'+d[p.dataIndex].percentage+'%)'}}}}),itemStyle:{color:new echarts.graphic.LinearGradient(0,0,1,0,[{offset:0,color:'#e94560'},{offset:1,color:'#0f3460'}])}}]
-            });
+            }, true);
         });
     }catch(e){console.log(e)}
 }

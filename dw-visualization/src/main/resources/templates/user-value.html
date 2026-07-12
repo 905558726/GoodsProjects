@@ -40,7 +40,7 @@ function refresh(){
         if(!sc) sc = echarts.init(document.getElementById('chartScatter'));
 
         fetch('/api/ads/user-value-distribution').then(function(r){return r.json()}).then(function(d){
-            pie.setOption({tooltip:{trigger:'item'},series:[{type:'pie',radius:'60%',data:Object.entries(d).map(function(e){return{name:e[0],value:e[1]}})}]});
+            pie.setOption({tooltip:{trigger:'item'},series:[{type:'pie',radius:'60%',data:Object.entries(d).map(function(e){return{name:e[0],value:e[1]}})}]}, true);
         });
         var colors={'高价值':'#e94560','中价值':'#0f3460','低价值':'#ccc'};
         fetch('/api/ads/user-value').then(function(r){return r.json()}).then(function(d){
@@ -49,7 +49,7 @@ function refresh(){
                 tooltip:{formatter:function(p){return p.value[2]+': freq='+p.value[0]+' amount='+Number(p.value[1]).toLocaleString()}},
                 xAxis:{type:'value',name:'购买频率'},yAxis:{type:'value',name:'累计消费(元)'},
                 series:Object.keys(by).map(function(t){return{name:t,type:'scatter',symbolSize:8,data:by[t],itemStyle:{color:colors[t]||'#888'}}})
-            });
+            }, true);
         });
     }catch(e){console.log(e)}
 }

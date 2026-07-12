@@ -46,7 +46,7 @@ function load(){
                 xAxis:{type:'category',data:d.map(function(x){return x.dt})},
                 yAxis:[{type:'value',name:'元'},{type:'value',name:'笔'}],
                 series:[{name:'销售额',type:'line',data:d.map(function(x){return x.totalSalesAmount}),smooth:true,itemStyle:{color:'#e94560'}},{name:'订单数',type:'bar',yAxisIndex:1,data:d.map(function(x){return x.totalOrderCount}),itemStyle:{color:'#0f3460'}}]
-            });
+            }, true);
         });
     }catch(e){console.log(e)}
 }

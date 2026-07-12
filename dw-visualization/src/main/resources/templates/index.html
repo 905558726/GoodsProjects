@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="zh-CN" xmlns:th="http://www.thymeleaf.org">
+<html lang="zh-CN">
 <head>
 <meta charset="UTF-8"><title>电商数据仓库可视化</title>
 <style>
@@ -18,114 +18,62 @@ body{display:flex;font-family:'Microsoft YaHei','PingFang SC',sans-serif;backgro
 </style></head>
 <body>
 <div class="sidebar">
-    <h4>DW可视化</h4>
-    <a href="/" class="active">仪表盘</a>
-    <a href="/category-revenue">品类营收</a>
-    <a href="/daily-sales-trend">销售趋势</a>
-    <a href="/user-value">用户价值</a>
-    <a href="/product-ranking">商品排行</a>
-    <a href="/regional-sales">区域销售</a>
-    <a href="/goods-info">商品库</a>
+<h4>DW可视化</h4>
+<a href="/" class="active">仪表盘</a>
+<a href="/category-revenue">品类营收</a>
+<a href="/daily-sales-trend">销售趋势</a>
+<a href="/user-value">用户价值</a>
+<a href="/product-ranking">商品排行</a>
+<a href="/regional-sales">区域销售</a>
+<a href="/goods-info">商品库</a>
 </div>
 <div class="main">
-<h5 style="margin-bottom:20px">电商数据仓库概览 <span id="updateTime" style="font-size:12px;color:#999;margin-left:10px"></span></h5>
-
-<!-- KPI卡片 -->
+<h5 style="margin-bottom:20px">电商数据仓库概览 <span id="updateTime" style="font-size:12px;color:#999;margin-left:10px">加载中...</span></h5>
 <div style="display:flex;gap:15px;margin-bottom:20px">
-    <div class="kpi-box" style="flex:1">
-        <div class="num">￥<span th:text="${#numbers.formatDecimal(kpi.totalSalesAmount, 0, 'COMMA', 2, 'POINT')}">0</span></div>
-        <div class="label">总销售额</div>
-    </div>
-    <div class="kpi-box" style="flex:1">
-        <div class="num" style="color:#0f3460" th:text="${#numbers.formatInteger(kpi.totalOrderCount, 0, 'COMMA')}">0</div>
-        <div class="label">总销量 (件)</div>
-    </div>
-    <div class="kpi-box" style="flex:1">
-        <div class="num" style="color:#16c79a" th:text="${#numbers.formatInteger(kpi.activeUserCount, 0, 'COMMA')}">0</div>
-        <div class="label">活跃用户数</div>
-    </div>
-    <div class="kpi-box" style="flex:1">
-        <div class="num" style="color:#e7b012" th:text="${#numbers.formatInteger(kpi.activeSkuCount, 0, 'COMMA')}">0</div>
-        <div class="label">动销SKU数</div>
-    </div>
+<div class="kpi-box" style="flex:1"><div class="num" id="kpiS">-</div><div class="label">总销售额 (元)</div></div>
+<div class="kpi-box" style="flex:1"><div class="num" style="color:#0f3460" id="kpiO">-</div><div class="label">总销量 (件)</div></div>
+<div class="kpi-box" style="flex:1"><div class="num" style="color:#16c79a" id="kpiU">-</div><div class="label">活跃用户数</div></div>
+<div class="kpi-box" style="flex:1"><div class="num" style="color:#e7b012" id="kpiSk">-</div><div class="label">动销SKU数</div></div>
 </div>
-
-<!-- 图表区 -->
 <div style="display:flex;gap:15px">
-    <div class="card" style="flex:1">
-        <div class="card-header">品类营收分布</div>
-        <div id="chartPie" style="height:320px"></div>
-    </div>
-    <div class="card" style="flex:1">
-        <div class="card-header">近7天销售趋势</div>
-        <div id="chartTrend" style="height:320px"></div>
-    </div>
+<div class="card" style="flex:1"><div class="card-header">品类营收分布</div><div id="chartPie" style="height:320px"></div></div>
+<div class="card" style="flex:1"><div class="card-header">近7天销售趋势</div><div id="chartTrend" style="height:320px"></div></div>
 </div>
 </div>
-
 <script src="https://cdn.jsdelivr.net/npm/echarts@5.5.0/dist/echarts.min.js"></script>
-<script th:inline="javascript">
-// 服务端传入数据
-var categoriesData = /*[[${categories}]]*/ [];
+<script>
 var cpu, ctr;
+function getChart(id){var e=document.getElementById(id);if(!e)return null;var c=echarts.getInstanceByDom(e);return c||echarts.init(e);}
+function updateTime(){var e=document.getElementById('updateTime');if(e)e.innerText='更新: '+new Date().toLocaleTimeString();}
 
-function getChart(domId) {
-    var el = document.getElementById(domId);
-    if (!el) return null;
-    var inst = echarts.getInstanceByDom(el);
-    if (!inst) inst = echarts.init(el);
-    return inst;
+function loadKPI(){
+    fetch('/api/ads/dashboard-kpi').then(function(r){return r.json()}).then(function(d){
+        var e=document.getElementById('kpiS');if(e)e.innerText=Number(d.totalSalesAmount||0).toLocaleString();
+        e=document.getElementById('kpiO');if(e)e.innerText=d.totalOrderCount||0;
+        e=document.getElementById('kpiU');if(e)e.innerText=d.activeUserCount||0;
+        e=document.getElementById('kpiSk');if(e)e.innerText=d.activeSkuCount||0;
+    });
 }
 
-function loadPie() {
-    try {
-        if (!cpu) cpu = getChart('chartPie');
-        if (!cpu) return;
-        fetch('/api/ads/category-revenue').then(function(r){return r.json()}).then(function(d){
-            cpu.setOption({
-                tooltip:{trigger:'item'},
-                series:[{type:'pie',radius:['40%','70%'],data:d.map(function(x){return{name:x.category,value:x.totalAmount}})}]
-            });
-        });
-    } catch(e) { console.log(e); }
+function loadPie(){
+    if(!cpu)cpu=getChart('chartPie');if(!cpu)return;
+    fetch('/api/ads/category-revenue').then(function(r){return r.json()}).then(function(d){
+        cpu.setOption({tooltip:{trigger:'item'},series:[{type:'pie',radius:['40%','70%'],data:d.map(function(x){return{name:x.category,value:x.totalAmount}})}]}, true);
+    });
 }
 
-function loadTrend() {
-    try {
-        if (!ctr) ctr = getChart('chartTrend');
-        if (!ctr) return;
-        var t = new Date().toISOString().slice(0,10);
-        var a = new Date(Date.now() - 7*86400000).toISOString().slice(0,10);
-        fetch('/api/ads/daily-sales-trend?startDate='+a+'&endDate='+t).then(function(r){return r.json()}).then(function(d){
-            ctr.setOption({
-                tooltip:{trigger:'axis'},
-                xAxis:{type:'category',data:d.map(function(x){return x.dt})},
-                yAxis:{type:'value'},
-                series:[{type:'line',data:d.map(function(x){return x.totalSalesAmount}),smooth:true,areaStyle:{}}]
-            });
-        });
-    } catch(e) { console.log(e); }
+function loadTrend(){
+    if(!ctr)ctr=getChart('chartTrend');if(!ctr)return;
+    var t=new Date().toISOString().slice(0,10),a=new Date(Date.now()-7*86400000).toISOString().slice(0,10);
+    fetch('/api/ads/daily-sales-trend?startDate='+a+'&endDate='+t).then(function(r){return r.json()}).then(function(d){
+        ctr.setOption({tooltip:{trigger:'axis'},xAxis:{type:'category',data:d.map(function(x){return x.dt})},yAxis:{type:'value'},series:[{type:'line',data:d.map(function(x){return x.totalSalesAmount}),smooth:true,areaStyle:{}}]}, true);
+    });
 }
 
-function updateTime() {
-    try { document.getElementById('updateTime').innerText = '更新: ' + new Date().toLocaleTimeString(); } catch(e) {}
-}
-
-// 从服务端数据初始化饼图
-(function initPie(){
-    if (categoriesData && categoriesData.length > 0) {
-        cpu = echarts.init(document.getElementById('chartPie'));
-        cpu.setOption({
-            tooltip:{trigger:'item'},
-            series:[{type:'pie',radius:['40%','70%'],data:categoriesData.map(function(x){return{name:x.category,value:x.totalAmount}})}]
-        });
-    }
-})();
-
-loadTrend();
-updateTime();
-loadPie();
-setInterval(function(){ loadPie(); loadTrend(); updateTime(); }, 5000);
+// 首次加载
+loadKPI();loadPie();loadTrend();updateTime();
+// 5秒刷新
+setInterval(function(){loadKPI();loadPie();loadTrend();updateTime();},5000);
 </script>
 </body>
 </html>

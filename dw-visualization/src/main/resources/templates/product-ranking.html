@@ -44,7 +44,7 @@ function load(){
                 tooltip:{trigger:'axis'},grid:{left:'3%',right:'12%',containLabel:true},
                 xAxis:{type:'value'},yAxis:{type:'category',inverse:true,data:d.map(function(x){return x.productName})},
                 series:[{type:'bar',data:d.map(function(x,i){return{value:x.totalQuantity,label:{show:true,position:'right',formatter:function(p){return'销量:'+p.value+'|'+d[p.dataIndex].category}}}}),itemStyle:{color:new echarts.graphic.LinearGradient(0,0,1,0,[{offset:0,color:'#e94560'},{offset:1,color:'#0f3460'}])}}]
-            });
+            }, true);
         });
     }catch(e){console.log(e)}
 }

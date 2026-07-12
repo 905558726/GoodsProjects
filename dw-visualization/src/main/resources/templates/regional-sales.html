@@ -47,7 +47,7 @@ function load(){
                 tooltip:{trigger:'axis'},grid:{left:'3%',right:'8%',containLabel:true},
                 xAxis:{type:'value',name:'销售额(元)'},yAxis:{type:'category',inverse:true,data:t.map(function(x){return x.province})},
                 series:[{type:'bar',data:t.map(function(x){return{value:x.totalAmount,label:{show:true,position:'right',formatter:function(p){return Number(p.value).toLocaleString()}}}}),itemStyle:{color:new echarts.graphic.LinearGradient(0,0,1,0,[{offset:0,color:'#e94560'},{offset:1,color:'#0f3460'}])}}]
-            });
+            }, true);
             var h=''; t.forEach(function(x,i){h+='<tr><td>'+(i+1)+'</td><td>'+x.province+'</td><td>'+Number(x.totalAmount).toLocaleString()+'</td><td>'+x.totalOrders+'</td></tr>'});
             document.getElementById('topList').innerHTML=h;
         });
