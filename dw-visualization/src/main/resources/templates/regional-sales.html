@@ -1,20 +1,60 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head><meta charset="UTF-8"><title>区域销售</title>
-<style>*{margin:0;padding:0;box-sizing:border-box}body{display:flex;font-family:'Microsoft YaHei',sans-serif}.sidebar{width:200px;min-height:100vh;background:#1a1a2e;color:#eee;flex-shrink:0}.sidebar h4{padding:20px 16px 10px;color:#e94560}.sidebar a{display:block;padding:12px 20px;color:#ccc;text-decoration:none;border-left:3px solid transparent;font-size:14px}.sidebar a:hover,.sidebar a.active{background:#16213e;color:#fff;border-left-color:#e94560}.main{flex:1;padding:20px 30px;background:#f5f6fa;min-height:100vh}.card{border:none;border-radius:10px;box-shadow:0 2px 10px rgba(0,0,0,.06);background:#fff;padding:15px}.card-header{font-weight:bold;padding:0 0 10px}table{width:100%;border-collapse:collapse}th,td{padding:6px 10px;border-bottom:1px solid #eee;font-size:13px}</style></head>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}body{display:flex;font-family:'Microsoft YaHei',sans-serif;background:#f0f2f5}
+.sidebar{width:200px;min-height:100vh;background:linear-gradient(180deg,#1a1a2e 0%,#16213e 100%);color:#eee;flex-shrink:0;position:sticky;top:0}
+.sidebar h4{padding:24px 20px 16px;color:#e94560;font-size:16px;letter-spacing:1px}
+.sidebar a{display:flex;align-items:center;padding:14px 20px;color:#b0b0c0;text-decoration:none;border-left:3px solid transparent;font-size:14px;transition:all .2s}
+.sidebar a:hover,.sidebar a.active{background:rgba(233,69,96,.1);color:#fff;border-left-color:#e94560}
+.main{flex:1;padding:24px 30px;min-height:100vh}
+.card{border:none;border-radius:10px;box-shadow:0 2px 10px rgba(0,0,0,.06);background:#fff;padding:20px}
+.card-header{font-weight:bold;padding:0 0 10px;font-size:15px}
+table{width:100%;border-collapse:collapse}
+th,td{padding:6px 10px;border-bottom:1px solid #eee;font-size:13px}
+select{padding:4px 8px;border:1px solid #ddd;border-radius:4px;font-size:13px}
+</style></head>
 <body>
-<div class="sidebar" id="sidebar"></div>
-<div class="main"><h5 style="margin-bottom:20px">区域销售分析 <select id="levSel" style="margin-left:10px;padding:4px 8px" onchange="load()"><option value="province">省级汇总</option><option value="city">市级明细</option></select> <span id="updateTime" style="font-size:12px;color:#999;margin-left:10px"></span></h5>
+<div class="sidebar">
+<h4>DW可视化</h4>
+<a href="/">仪表盘</a>
+<a href="/category-revenue">品类营收</a>
+<a href="/daily-sales-trend">销售趋势</a>
+<a href="/user-value">用户价值</a>
+<a href="/product-ranking">商品排行</a>
+<a href="/regional-sales" class="active">区域销售</a>
+<a href="/goods-info">商品库</a>
+</div>
+<div class="main">
+<h5 style="margin-bottom:20px">区域销售分析
+<select id="levSel" style="margin-left:10px" onchange="load()"><option value="province">省级汇总</option><option value="city">市级明细</option></select>
+<span id="updateTime" style="font-size:12px;color:#999;margin-left:10px"></span></h5>
 <div style="display:flex;gap:15px">
 <div class="card" style="flex:2"><div id="chartMap" style="height:450px"></div></div>
 <div class="card" style="flex:1"><div class="card-header">Top10</div><table><thead><tr><th>#</th><th>省份</th><th>销售额</th><th>订单</th></tr></thead><tbody id="topList"></tbody></table></div>
-</div></div>
+</div>
+</div>
 <script src="https://cdn.jsdelivr.net/npm/echarts@5.5.0/dist/echarts.min.js"></script>
 <script>
-document.getElementById('sidebar').innerHTML='<h4>DW可视化</h4>'+['仪表盘','品类营收','销售趋势','用户价值','商品排行','区域销售','商品库'].map(function(n,i){var p=['/','/category-revenue','/daily-sales-trend','/user-value','/product-ranking','/regional-sales','/goods-info'][i];return'<a href="'+p+'"'+(location.pathname===p?' class="active"':'')+'>'+n+'</a>'}).join('');
-var cm=echarts.init(document.getElementById('chartMap'));
-function load(){document.getElementById('updateTime').innerText='更新: '+new Date().toLocaleTimeString();fetch('/api/ads/regional-sales?level='+document.getElementById('levSel').value).then(function(r){return r.json()}).then(function(d){var t=d.slice(0,10);cm.setOption({tooltip:{trigger:'axis'},grid:{left:'3%',right:'8%',containLabel:true},xAxis:{type:'value',name:'销售额(元)'},yAxis:{type:'category',inverse:true,data:t.map(function(x){return x.province})},series:[{type:'bar',data:t.map(function(x){return{value:x.totalAmount,label:{show:true,position:'right',formatter:function(p){return Number(p.value).toLocaleString()}}}}),itemStyle:{color:new echarts.graphic.LinearGradient(0,0,1,0,[{offset:0,color:'#e94560'},{offset:1,color:'#0f3460'}])}}]});var h='';t.forEach(function(x,i){h+='<tr><td>'+(i+1)+'</td><td>'+x.province+'</td><td>'+Number(x.totalAmount).toLocaleString()+'</td><td>'+x.totalOrders+'</td></tr>'});document.getElementById('topList').innerHTML=h})}
-load();setInterval(load,5000);
+function load(){
+    try{ document.getElementById('updateTime').innerText='更新: '+new Date().toLocaleTimeString(); }catch(e){}
+    try{
+        fetch('/api/ads/regional-sales?level='+document.getElementById('levSel').value).then(function(r){return r.json()}).then(function(d){
+            var t=d.slice(0,10);
+            var cm = echarts.getInstanceByDom(document.getElementById('chartMap'));
+            if(!cm) cm = echarts.init(document.getElementById('chartMap'));
+            cm.setOption({
+                tooltip:{trigger:'axis'},grid:{left:'3%',right:'8%',containLabel:true},
+                xAxis:{type:'value',name:'销售额(元)'},yAxis:{type:'category',inverse:true,data:t.map(function(x){return x.province})},
+                series:[{type:'bar',data:t.map(function(x){return{value:x.totalAmount,label:{show:true,position:'right',formatter:function(p){return Number(p.value).toLocaleString()}}}}),itemStyle:{color:new echarts.graphic.LinearGradient(0,0,1,0,[{offset:0,color:'#e94560'},{offset:1,color:'#0f3460'}])}}]
+            });
+            var h=''; t.forEach(function(x,i){h+='<tr><td>'+(i+1)+'</td><td>'+x.province+'</td><td>'+Number(x.totalAmount).toLocaleString()+'</td><td>'+x.totalOrders+'</td></tr>'});
+            document.getElementById('topList').innerHTML=h;
+        });
+    }catch(e){console.log(e)}
+}
+load();
+setInterval(load, 5000);
 </script>
 </body>
 </html>

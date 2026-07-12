@@ -67,36 +67,54 @@ body{display:flex;font-family:'Microsoft YaHei','PingFang SC',sans-serif;backgro
 <script th:inline="javascript">
 // 服务端传入数据
 var categoriesData = /*[[${categories}]]*/ [];
-var cpu = echarts.init(document.getElementById('chartPie'));
-var ctr = echarts.init(document.getElementById('chartTrend'));
+var cpu, ctr;
+
+function getChart(domId) {
+    var el = document.getElementById(domId);
+    if (!el) return null;
+    var inst = echarts.getInstanceByDom(el);
+    if (!inst) inst = echarts.init(el);
+    return inst;
+}
 
 function loadPie() {
-    fetch('/api/ads/category-revenue').then(function(r){return r.json()}).then(function(d){
-        cpu.setOption({
-            tooltip:{trigger:'item'},
-            series:[{type:'pie',radius:['40%','70%'],data:d.map(function(x){return{name:x.category,value:x.totalAmount}})}]
+    try {
+        if (!cpu) cpu = getChart('chartPie');
+        if (!cpu) return;
+        fetch('/api/ads/category-revenue').then(function(r){return r.json()}).then(function(d){
+            cpu.setOption({
+                tooltip:{trigger:'item'},
+                series:[{type:'pie',radius:['40%','70%'],data:d.map(function(x){return{name:x.category,value:x.totalAmount}})}]
+            });
         });
-    });
+    } catch(e) { console.log(e); }
 }
 
 function loadTrend() {
-    var t = new Date().toISOString().slice(0,10);
-    var a = new Date(Date.now() - 7*86400000).toISOString().slice(0,10);
-    fetch('/api/ads/daily-sales-trend?startDate='+a+'&endDate='+t).then(function(r){return r.json()}).then(function(d){
-        ctr.setOption({
-            tooltip:{trigger:'axis'},
-            xAxis:{type:'category',data:d.map(function(x){return x.dt})},
-            yAxis:{type:'value'},
-            series:[{type:'line',data:d.map(function(x){return x.totalSalesAmount}),smooth:true,areaStyle:{}}]
+    try {
+        if (!ctr) ctr = getChart('chartTrend');
+        if (!ctr) return;
+        var t = new Date().toISOString().slice(0,10);
+        var a = new Date(Date.now() - 7*86400000).toISOString().slice(0,10);
+        fetch('/api/ads/daily-sales-trend?startDate='+a+'&endDate='+t).then(function(r){return r.json()}).then(function(d){
+            ctr.setOption({
+                tooltip:{trigger:'axis'},
+                xAxis:{type:'category',data:d.map(function(x){return x.dt})},
+                yAxis:{type:'value'},
+                series:[{type:'line',data:d.map(function(x){return x.totalSalesAmount}),smooth:true,areaStyle:{}}]
+            });
         });
-    });
+    } catch(e) { console.log(e); }
 }
 
-function updateTime() { document.getElementById('updateTime').innerText = '更新: ' + new Date().toLocaleTimeString(); }
+function updateTime() {
+    try { document.getElementById('updateTime').innerText = '更新: ' + new Date().toLocaleTimeString(); } catch(e) {}
+}
 
 // 从服务端数据初始化饼图
 (function initPie(){
     if (categoriesData && categoriesData.length > 0) {
+        cpu = echarts.init(document.getElementById('chartPie'));
         cpu.setOption({
             tooltip:{trigger:'item'},
             series:[{type:'pie',radius:['40%','70%'],data:categoriesData.map(function(x){return{name:x.category,value:x.totalAmount}})}]
@@ -106,7 +124,7 @@ function updateTime() { document.getElementById('updateTime').innerText = '更�
 
 loadTrend();
 updateTime();
-loadPie(); // 随后用API覆盖
+loadPie();
 setInterval(function(){ loadPie(); loadTrend(); updateTime(); }, 5000);
 </script>
 </body>
