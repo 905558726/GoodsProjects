@@ -42,12 +42,9 @@ public class OdsToDwdJob {
         conn = DriverManager.getConnection(dbUrl, dbUser, dbPass);
         conn.setAutoCommit(false);
 
-        // 先清表重新加载
-        Statement s = conn.createStatement();
-        s.execute("TRUNCATE dwd.dwd_product, dwd.dwd_order, dwd.dwd_order_item RESTART IDENTITY CASCADE");
-        s.close();
-        conn.commit();
+        // 不再 TRUNCATE: 使用 UPSERT 增量写入
         System.out.println("Tables truncated.");
+        productCount = 0; orderCount = 0; itemCount = 0;
 
         loadProducts(kafka);
         loadOrders(kafka);
