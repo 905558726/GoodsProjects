@@ -27,7 +27,7 @@ select{padding:4px 8px;border:1px solid #ddd;border-radius:4px;font-size:13px}
 <select id="catSel" style="margin-left:10px" onchange="load()"><option value="">全部品类</option></select>
 <select id="topSel" style="margin-left:8px" onchange="load()"><option value="10">Top10</option><option value="20">Top20</option><option value="50">Top50</option></select>
 <span id="updateTime" style="font-size:12px;color:#999;margin-left:10px"></span></h5>
-<div class="card"><div id="chart" style="height:450px"></div></div>
+<div class="card"><div id="chart" style="min-height:450px"></div></div>
 </div>
 <script src="https://cdn.jsdelivr.net/npm/echarts@5.5.0/dist/echarts.min.js"></script>
 <script>
@@ -38,12 +38,14 @@ function load(){
     try{
         var cat=document.getElementById('catSel').value,topN=document.getElementById('topSel').value;
         fetch('/api/ads/product-ranking?topN='+topN+(cat?'&category='+encodeURIComponent(cat):'')).then(function(r){return r.json()}).then(function(d){
-            var c = echarts.getInstanceByDom(document.getElementById('chart'));
-            if(!c) c = echarts.init(document.getElementById('chart'));
+            var n=d.length||10,h=Math.max(450,n*28),el=document.getElementById('chart');
+            el.style.height=h+'px';
+            var c = echarts.getInstanceByDom(el);
+            if(!c){c=echarts.init(el);}else{c.resize();}
             c.setOption({
-                tooltip:{trigger:'axis'},grid:{left:'3%',right:'12%',containLabel:true},
-                xAxis:{type:'value'},yAxis:{type:'category',inverse:true,data:d.map(function(x){return x.productName})},
-                series:[{type:'bar',data:d.map(function(x,i){return{value:x.totalQuantity,label:{show:true,position:'right',formatter:function(p){return'销量:'+p.value+'|'+d[p.dataIndex].category}}}}),itemStyle:{color:new echarts.graphic.LinearGradient(0,0,1,0,[{offset:0,color:'#e94560'},{offset:1,color:'#0f3460'}])}}]
+                tooltip:{trigger:'axis'},grid:{left:'3%',right:'18%',containLabel:true},
+                xAxis:{type:'value'},yAxis:{type:'category',inverse:true,data:d.map(function(x){return x.productName}),axisLabel:{fontSize:12,width:120,overflow:'truncate'}},
+                series:[{type:'bar',barWidth:14,data:d.map(function(x,i){return{value:x.totalQuantity,label:{show:true,position:'right',formatter:function(p){return'销量:'+p.value+'|'+d[p.dataIndex].category}}}}),itemStyle:{color:new echarts.graphic.LinearGradient(0,0,1,0,[{offset:0,color:'#e94560'},{offset:1,color:'#0f3460'}])}}]
             }, true);
         });
     }catch(e){console.log(e)}
