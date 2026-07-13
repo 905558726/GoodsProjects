@@ -47,8 +47,9 @@ function refresh(){
             var by={}; d.forEach(function(x){var t=x.valueTier;if(!by[t])by[t]=[];by[t].push([new Date(x.lastOrderDate).getTime(),x.totalMonetary,x.buyerPhone,x.orderFrequency,x.lastOrderDate])});
             sc.setOption({
                 tooltip:{formatter:function(p){return p.value[2]+': '+p.value[4]+' freq='+p.value[3]+' amount='+Number(p.value[1]).toLocaleString()}},
+                dataZoom:[{type:'slider',height:24,bottom:8},{type:'inside'}],
                 xAxis:{type:'time',name:'最近购买日期'},yAxis:{type:'value',name:'累计消费(元)'},
-                series:Object.keys(by).map(function(t){return{name:t,type:'scatter',symbolSize:8,data:by[t],itemStyle:{color:colors[t]||'#888'}}})
+                series:Object.keys(by).map(function(t){return{name:t,type:'scatter',symbolSize:5,large:true,data:by[t],itemStyle:{color:colors[t]||'#888',opacity:0.4}}})
             }, true);
         });
     }catch(e){console.log(e)}
