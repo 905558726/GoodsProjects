@@ -44,10 +44,10 @@ tbody tr:hover{background:#fef0f2}
 <div style="display:flex;gap:15px">
 <div class="card" style="flex:1"><div class="card-header">价值分层</div><div id="chartPie" style="height:320px"></div></div>
 <div class="card" style="flex:2">
-<div class="card-header">RFM散点图 (Top10高价值用户)</div>
+<div class="card-header">RFM散点图 (当天Top10高价值用户)</div>
 <div class="date-bar">
-<label>时间范围:</label>
-<input type="date" id="dateFrom"><span>~</span><input type="date" id="dateTo">
+<label>日期:</label>
+<input type="date" id="datePick">
 <button onclick="doFilterScatter()">筛选</button>
 <span id="scatterInfo" style="color:#999"></span>
 </div>
@@ -64,22 +64,12 @@ tbody tr:hover{background:#fef0f2}
 </div>
 <script src="https://cdn.jsdelivr.net/npm/echarts@5.5.0/dist/echarts.min.js"></script>
 <script>
-var allUserData = null;  // 缓存全量数据
+var allUserData = null;
 
-// 初始化默认日期范围：近30天
+// 初始化默认日期：今天
 (function initDate(){
-    var t = new Date();
-    document.getElementById('dateTo').value = t.toISOString().slice(0,10);
-    t.setDate(t.getDate() - 30);
-    document.getElementById('dateFrom').value = t.toISOString().slice(0,10);
+    document.getElementById('datePick').value = new Date().toISOString().slice(0,10);
 })();
-
-function inRange(d, from, to){
-    if(!d) return false;
-    if(from && d < from) return false;
-    if(to && d > to) return false;
-    return true;
-}
 
 function doFilterScatter(){
     var sc = echarts.getInstanceByDom(document.getElementById('chartScatter'));
@@ -89,12 +79,11 @@ function doFilterScatter(){
     var ch = document.getElementById('chartScatter');
     ld.style.display = 'flex';
     ch.style.display = 'none';
-    // 用 setTimeout 让 loading 先渲染出来
     setTimeout(function(){
-        var from = document.getElementById('dateFrom').value;
-        var to = document.getElementById('dateTo').value;
+        var pick = document.getElementById('datePick').value;
+        // 只筛选 lastOrderDate 等于选中日期的用户
         var filtered = allUserData.filter(function(x){
-            return inRange(x.lastOrderDate, from, to);
+            return x.lastOrderDate === pick;
         });
         var top10 = filtered.sort(function(a,b){return (b.totalMonetary||0)-(a.totalMonetary||0)}).slice(0,10);
         var colors={'高价值':'#e94560','中价值':'#0f3460','低价值':'#ccc'};
@@ -107,7 +96,7 @@ function doFilterScatter(){
         }, true);
         ld.style.display = 'none';
         ch.style.display = '';
-        document.getElementById('scatterInfo').innerText = '范围内共'+filtered.length+'名用户，展示Top10';
+        document.getElementById('scatterInfo').innerText = pick+' 当天共'+filtered.length+'名用户，展示Top10';
     }, 50);
 }
 
