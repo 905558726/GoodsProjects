@@ -36,7 +36,7 @@ tbody tr:hover{background:#fef0f2}
 <h5 style="margin-bottom:20px">用户价值分析 (RFM) <span id="updateTime" style="font-size:12px;color:#999;margin-left:10px"></span></h5>
 <div style="display:flex;gap:15px">
 <div class="card" style="flex:1"><div class="card-header">价值分层</div><div id="chartPie" style="height:320px"></div></div>
-<div class="card" style="flex:2"><div class="card-header">RFM散点图 (最近购买 vs 金额)</div><div id="chartScatter" style="height:320px"></div></div>
+<div class="card" style="flex:2"><div class="card-header">RFM散点图 (Top10高价值用户)</div><div id="chartScatter" style="height:320px"></div></div>
 </div>
 <div class="card" style="margin-top:15px">
 <div class="card-header">高价值用户明细 (累计消费≥1万元) <span style="font-weight:400;font-size:12px;color:#999;margin-left:8px">Top20 按消费金额降序</span></div>
@@ -60,12 +60,14 @@ function refresh(){
         });
         var colors={'高价值':'#e94560','中价值':'#0f3460','低价值':'#ccc'};
         fetch('/api/ads/user-value').then(function(r){return r.json()}).then(function(d){
-            var by={}; d.forEach(function(x){var t=x.valueTier;if(!by[t])by[t]=[];by[t].push([new Date(x.lastOrderDate).getTime(),x.totalMonetary,x.buyerPhone,x.orderFrequency,x.lastOrderDate])});
+            // 散点图只展示当天top10高价值用户(按累计消费降序)
+            var top10=d.sort(function(a,b){return (b.totalMonetary||0)-(a.totalMonetary||0)}).slice(0,10);
+            var by={}; top10.forEach(function(x){var t=x.valueTier;if(!by[t])by[t]=[];by[t].push([new Date(x.lastOrderDate).getTime(),x.totalMonetary,x.buyerPhone,x.orderFrequency,x.lastOrderDate])});
             sc.setOption({
-                tooltip:{formatter:function(p){return p.value[2]+': '+p.value[4]+' freq='+p.value[3]+' amount='+Number(p.value[1]).toLocaleString()}},
+                tooltip:{formatter:function(p){var v=p.value;return (v[2]||'')+': '+v[4]+' freq='+(v[3]||0)+' amount='+Number(v[1]).toLocaleString()}},
                 dataZoom:[{type:'slider',height:24,bottom:8},{type:'inside'}],
                 xAxis:{type:'time',name:'最近购买日期'},yAxis:{type:'value',name:'累计消费(元)'},
-                series:Object.keys(by).map(function(t){return{name:t,type:'scatter',symbolSize:5,large:true,data:by[t],itemStyle:{color:colors[t]||'#888',opacity:0.4}}})
+                series:Object.keys(by).map(function(t){return{name:t,type:'scatter',symbolSize:14,large:false,data:by[t],label:{show:true,formatter:function(p){return p.value[2]||''},position:'top',fontSize:10},itemStyle:{color:colors[t]||'#888'}}})
             }, true);
         });
         // 高价值用户表格 Top20
