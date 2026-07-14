@@ -24,6 +24,9 @@ tbody tr:hover{background:#fef0f2}
 .date-bar input[type=date]{padding:4px 8px;border:1px solid #ddd;border-radius:4px;font-size:13px}
 .date-bar button{padding:5px 14px;background:#e94560;color:#fff;border:none;border-radius:4px;cursor:pointer;font-size:13px}
 .date-bar button:hover{background:#c73d52}
+.scatter-loading{display:flex;align-items:center;justify-content:center;height:300px;color:#999;font-size:14px}
+.scatter-loading .spinner{width:20px;height:20px;border:3px solid #e0e0e0;border-top-color:#e94560;border-radius:50%;animation:spin .6s linear infinite;margin-right:10px}
+@keyframes spin{to{transform:rotate(360deg)}}
 </style></head>
 <body>
 <div class="sidebar">
@@ -49,6 +52,7 @@ tbody tr:hover{background:#fef0f2}
 <span id="scatterInfo" style="color:#999"></span>
 </div>
 <div id="chartScatter" style="height:300px"></div>
+<div id="scatterLoading" class="scatter-loading"><span class="spinner"></span>数据加载中...</div>
 </div>
 </div>
 <div class="card" style="margin-top:15px">
@@ -81,21 +85,30 @@ function doFilterScatter(){
     var sc = echarts.getInstanceByDom(document.getElementById('chartScatter'));
     if(!sc) sc = echarts.init(document.getElementById('chartScatter'));
     if(!allUserData){ return; }
-    var from = document.getElementById('dateFrom').value;
-    var to = document.getElementById('dateTo').value;
-    var filtered = allUserData.filter(function(x){
-        return inRange(x.lastOrderDate, from, to);
-    });
-    var top10 = filtered.sort(function(a,b){return (b.totalMonetary||0)-(a.totalMonetary||0)}).slice(0,10);
-    var colors={'高价值':'#e94560','中价值':'#0f3460','低价值':'#ccc'};
-    var by={}; top10.forEach(function(x){var t=x.valueTier;if(!by[t])by[t]=[];by[t].push([new Date(x.lastOrderDate).getTime(),x.totalMonetary,x.buyerPhone,x.orderFrequency,x.lastOrderDate])});
-    sc.setOption({
-        tooltip:{formatter:function(p){var v=p.value;return (v[2]||'')+': '+v[4]+' freq='+(v[3]||0)+' amount='+Number(v[1]).toLocaleString()}},
-        dataZoom:[{type:'slider',height:24,bottom:8},{type:'inside'}],
-        xAxis:{type:'time',name:'最近购买日期'},yAxis:{type:'value',name:'累计消费(元)'},
-        series:Object.keys(by).map(function(t){return{name:t,type:'scatter',symbolSize:14,large:false,data:by[t],label:{show:true,formatter:function(p){return p.value[2]||''},position:'top',fontSize:10},itemStyle:{color:colors[t]||'#888'}}})
-    }, true);
-    document.getElementById('scatterInfo').innerText = '范围内共'+filtered.length+'名用户，展示Top10';
+    var ld = document.getElementById('scatterLoading');
+    var ch = document.getElementById('chartScatter');
+    ld.style.display = 'flex';
+    ch.style.display = 'none';
+    // 用 setTimeout 让 loading 先渲染出来
+    setTimeout(function(){
+        var from = document.getElementById('dateFrom').value;
+        var to = document.getElementById('dateTo').value;
+        var filtered = allUserData.filter(function(x){
+            return inRange(x.lastOrderDate, from, to);
+        });
+        var top10 = filtered.sort(function(a,b){return (b.totalMonetary||0)-(a.totalMonetary||0)}).slice(0,10);
+        var colors={'高价值':'#e94560','中价值':'#0f3460','低价值':'#ccc'};
+        var by={}; top10.forEach(function(x){var t=x.valueTier;if(!by[t])by[t]=[];by[t].push([new Date(x.lastOrderDate).getTime(),x.totalMonetary,x.buyerPhone,x.orderFrequency,x.lastOrderDate])});
+        sc.setOption({
+            tooltip:{formatter:function(p){var v=p.value;return (v[2]||'')+': '+v[4]+' freq='+(v[3]||0)+' amount='+Number(v[1]).toLocaleString()}},
+            dataZoom:[{type:'slider',height:24,bottom:8},{type:'inside'}],
+            xAxis:{type:'time',name:'最近购买日期'},yAxis:{type:'value',name:'累计消费(元)'},
+            series:Object.keys(by).map(function(t){return{name:t,type:'scatter',symbolSize:14,large:false,data:by[t],label:{show:true,formatter:function(p){return p.value[2]||''},position:'top',fontSize:10},itemStyle:{color:colors[t]||'#888'}}})
+        }, true);
+        ld.style.display = 'none';
+        ch.style.display = '';
+        document.getElementById('scatterInfo').innerText = '范围内共'+filtered.length+'名用户，展示Top10';
+    }, 50);
 }
 
 function refresh(){
