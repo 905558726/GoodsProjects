@@ -20,6 +20,10 @@ tbody tr:hover{background:#fef0f2}
 .badge-high{background:#fde8ec;color:#e94560}
 .amount{color:#e94560;font-weight:600}
 .muted{color:#999;font-size:12px}
+.date-bar{display:flex;align-items:center;gap:8px;margin-bottom:10px;font-size:13px}
+.date-bar input[type=date]{padding:4px 8px;border:1px solid #ddd;border-radius:4px;font-size:13px}
+.date-bar button{padding:5px 14px;background:#e94560;color:#fff;border:none;border-radius:4px;cursor:pointer;font-size:13px}
+.date-bar button:hover{background:#c73d52}
 </style></head>
 <body>
 <div class="sidebar">
@@ -36,7 +40,16 @@ tbody tr:hover{background:#fef0f2}
 <h5 style="margin-bottom:20px">用户价值分析 (RFM) <span id="updateTime" style="font-size:12px;color:#999;margin-left:10px"></span></h5>
 <div style="display:flex;gap:15px">
 <div class="card" style="flex:1"><div class="card-header">价值分层</div><div id="chartPie" style="height:320px"></div></div>
-<div class="card" style="flex:2"><div class="card-header">RFM散点图 (Top10高价值用户)</div><div id="chartScatter" style="height:320px"></div></div>
+<div class="card" style="flex:2">
+<div class="card-header">RFM散点图 (Top10高价值用户)</div>
+<div class="date-bar">
+<label>时间范围:</label>
+<input type="date" id="dateFrom"><span>~</span><input type="date" id="dateTo">
+<button onclick="doFilterScatter()">筛选</button>
+<span id="scatterInfo" style="color:#999"></span>
+</div>
+<div id="chartScatter" style="height:300px"></div>
+</div>
 </div>
 <div class="card" style="margin-top:15px">
 <div class="card-header">高价值用户明细 (累计消费≥1万元) <span style="font-weight:400;font-size:12px;color:#999;margin-left:8px">Top20 按消费金额降序</span></div>
@@ -47,28 +60,56 @@ tbody tr:hover{background:#fef0f2}
 </div>
 <script src="https://cdn.jsdelivr.net/npm/echarts@5.5.0/dist/echarts.min.js"></script>
 <script>
+var allUserData = null;  // 缓存全量数据
+
+// 初始化默认日期范围：近30天
+(function initDate(){
+    var t = new Date();
+    document.getElementById('dateTo').value = t.toISOString().slice(0,10);
+    t.setDate(t.getDate() - 30);
+    document.getElementById('dateFrom').value = t.toISOString().slice(0,10);
+})();
+
+function inRange(d, from, to){
+    if(!d) return false;
+    if(from && d < from) return false;
+    if(to && d > to) return false;
+    return true;
+}
+
+function doFilterScatter(){
+    var sc = echarts.getInstanceByDom(document.getElementById('chartScatter'));
+    if(!sc) sc = echarts.init(document.getElementById('chartScatter'));
+    if(!allUserData){ return; }
+    var from = document.getElementById('dateFrom').value;
+    var to = document.getElementById('dateTo').value;
+    var filtered = allUserData.filter(function(x){
+        return inRange(x.lastOrderDate, from, to);
+    });
+    var top10 = filtered.sort(function(a,b){return (b.totalMonetary||0)-(a.totalMonetary||0)}).slice(0,10);
+    var colors={'高价值':'#e94560','中价值':'#0f3460','低价值':'#ccc'};
+    var by={}; top10.forEach(function(x){var t=x.valueTier;if(!by[t])by[t]=[];by[t].push([new Date(x.lastOrderDate).getTime(),x.totalMonetary,x.buyerPhone,x.orderFrequency,x.lastOrderDate])});
+    sc.setOption({
+        tooltip:{formatter:function(p){var v=p.value;return (v[2]||'')+': '+v[4]+' freq='+(v[3]||0)+' amount='+Number(v[1]).toLocaleString()}},
+        dataZoom:[{type:'slider',height:24,bottom:8},{type:'inside'}],
+        xAxis:{type:'time',name:'最近购买日期'},yAxis:{type:'value',name:'累计消费(元)'},
+        series:Object.keys(by).map(function(t){return{name:t,type:'scatter',symbolSize:14,large:false,data:by[t],label:{show:true,formatter:function(p){return p.value[2]||''},position:'top',fontSize:10},itemStyle:{color:colors[t]||'#888'}}})
+    }, true);
+    document.getElementById('scatterInfo').innerText = '范围内共'+filtered.length+'名用户，展示Top10';
+}
+
 function refresh(){
     try{ document.getElementById('updateTime').innerText='更新: '+new Date().toLocaleTimeString(); }catch(e){}
     try{
         var pie = echarts.getInstanceByDom(document.getElementById('chartPie'));
         if(!pie) pie = echarts.init(document.getElementById('chartPie'));
-        var sc = echarts.getInstanceByDom(document.getElementById('chartScatter'));
-        if(!sc) sc = echarts.init(document.getElementById('chartScatter'));
 
         fetch('/api/ads/user-value-distribution').then(function(r){return r.json()}).then(function(d){
             pie.setOption({tooltip:{trigger:'item'},series:[{type:'pie',radius:'60%',data:Object.entries(d).map(function(e){return{name:e[0],value:e[1]}})}]}, true);
         });
-        var colors={'高价值':'#e94560','中价值':'#0f3460','低价值':'#ccc'};
         fetch('/api/ads/user-value').then(function(r){return r.json()}).then(function(d){
-            // 散点图只展示当天top10高价值用户(按累计消费降序)
-            var top10=d.sort(function(a,b){return (b.totalMonetary||0)-(a.totalMonetary||0)}).slice(0,10);
-            var by={}; top10.forEach(function(x){var t=x.valueTier;if(!by[t])by[t]=[];by[t].push([new Date(x.lastOrderDate).getTime(),x.totalMonetary,x.buyerPhone,x.orderFrequency,x.lastOrderDate])});
-            sc.setOption({
-                tooltip:{formatter:function(p){var v=p.value;return (v[2]||'')+': '+v[4]+' freq='+(v[3]||0)+' amount='+Number(v[1]).toLocaleString()}},
-                dataZoom:[{type:'slider',height:24,bottom:8},{type:'inside'}],
-                xAxis:{type:'time',name:'最近购买日期'},yAxis:{type:'value',name:'累计消费(元)'},
-                series:Object.keys(by).map(function(t){return{name:t,type:'scatter',symbolSize:14,large:false,data:by[t],label:{show:true,formatter:function(p){return p.value[2]||''},position:'top',fontSize:10},itemStyle:{color:colors[t]||'#888'}}})
-            }, true);
+            allUserData = d;
+            doFilterScatter();
         });
         // 高价值用户表格 Top20
         fetch('/api/ads/user-value?valueTier='+encodeURIComponent('高价值')).then(function(r){return r.json()}).then(function(d){
