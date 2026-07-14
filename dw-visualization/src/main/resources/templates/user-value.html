@@ -44,10 +44,10 @@ tbody tr:hover{background:#fef0f2}
 <div style="display:flex;gap:15px">
 <div class="card" style="flex:1"><div class="card-header">价值分层</div><div id="chartPie" style="height:320px"></div></div>
 <div class="card" style="flex:2">
-<div class="card-header">RFM散点图 (当天Top10高价值用户)</div>
+<div class="card-header">RFM散点图 (每天Top10高价值用户)</div>
 <div class="date-bar">
-<label>日期:</label>
-<input type="date" id="datePick">
+<label>时间范围:</label>
+<input type="date" id="dateFrom"><span>~</span><input type="date" id="dateTo">
 <button onclick="doFilterScatter()">筛选</button>
 <span id="scatterInfo" style="color:#999"></span>
 </div>
@@ -66,9 +66,12 @@ tbody tr:hover{background:#fef0f2}
 <script>
 var allUserData = null;
 
-// 初始化默认日期：今天
+// 初始化默认日期范围：近30天
 (function initDate(){
-    document.getElementById('datePick').value = new Date().toISOString().slice(0,10);
+    var t = new Date();
+    document.getElementById('dateTo').value = t.toISOString().slice(0,10);
+    t.setDate(t.getDate() - 30);
+    document.getElementById('dateFrom').value = t.toISOString().slice(0,10);
 })();
 
 function doFilterScatter(){
@@ -80,23 +83,37 @@ function doFilterScatter(){
     ld.style.display = 'flex';
     ch.style.display = 'none';
     setTimeout(function(){
-        var pick = document.getElementById('datePick').value;
-        // 只筛选 lastOrderDate 等于选中日期的用户
-        var filtered = allUserData.filter(function(x){
-            return x.lastOrderDate === pick;
+        var from = document.getElementById('dateFrom').value;
+        var to = document.getElementById('dateTo').value;
+        // 按天分组，每天独立取 Top10
+        var dayMap = {};
+        allUserData.forEach(function(x){
+            var d = x.lastOrderDate;
+            if(!d) return;
+            if(from && d < from) return;
+            if(to && d > to) return;
+            if(!dayMap[d]) dayMap[d] = [];
+            dayMap[d].push(x);
         });
-        var top10 = filtered.sort(function(a,b){return (b.totalMonetary||0)-(a.totalMonetary||0)}).slice(0,10);
+        var points = [];
+        Object.keys(dayMap).forEach(function(day){
+            var users = dayMap[day].sort(function(a,b){return (b.totalMonetary||0)-(a.totalMonetary||0)}).slice(0,10);
+            users.forEach(function(x){
+                points.push([new Date(x.lastOrderDate).getTime(), x.totalMonetary, x.buyerPhone, x.orderFrequency, x.lastOrderDate, x.valueTier]);
+            });
+        });
         var colors={'高价值':'#e94560','中价值':'#0f3460','低价值':'#ccc'};
-        var by={}; top10.forEach(function(x){var t=x.valueTier;if(!by[t])by[t]=[];by[t].push([new Date(x.lastOrderDate).getTime(),x.totalMonetary,x.buyerPhone,x.orderFrequency,x.lastOrderDate])});
+        var by={}; points.forEach(function(x){var t=x[5]||'低价值';if(!by[t])by[t]=[];by[t].push(x)});
         sc.setOption({
             tooltip:{formatter:function(p){var v=p.value;return (v[2]||'')+': '+v[4]+' freq='+(v[3]||0)+' amount='+Number(v[1]).toLocaleString()}},
             dataZoom:[{type:'slider',height:24,bottom:8},{type:'inside'}],
             xAxis:{type:'time',name:'最近购买日期'},yAxis:{type:'value',name:'累计消费(元)'},
-            series:Object.keys(by).map(function(t){return{name:t,type:'scatter',symbolSize:14,large:false,data:by[t],label:{show:true,formatter:function(p){return p.value[2]||''},position:'top',fontSize:10},itemStyle:{color:colors[t]||'#888'}}})
+            series:Object.keys(by).map(function(t){return{name:t,type:'scatter',symbolSize:10,large:true,data:by[t],itemStyle:{color:colors[t]||'#888',opacity:0.5}}})
         }, true);
         ld.style.display = 'none';
         ch.style.display = '';
-        document.getElementById('scatterInfo').innerText = pick+' 当天共'+filtered.length+'名用户，展示Top10';
+        var dayCount = Object.keys(dayMap).length;
+        document.getElementById('scatterInfo').innerText = dayCount+'天 × 每天Top10 = '+points.length+'个点';
     }, 50);
 }
 
