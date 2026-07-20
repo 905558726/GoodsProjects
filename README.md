@@ -235,7 +235,7 @@ java -jar target/dw-visualization-1.0.jar
 # 单次随机生成
 sh run_data_pipeline.sh
 
-# 持续循环生成（随机间隔 5-15 秒）
+# 持续循环生成（随机间隔 45-60 秒）
 sh run_loop.sh
 ```
 
@@ -250,6 +250,8 @@ sh run_loop.sh
 | 商品排行 | `/product-ranking` | TopN 排行榜 + 品类筛选 |
 | 区域销售 | `/regional-sales` | 省/市级横向柱状图 + Top10 表格 |
 | 商品库 | `/goods-info` | 分页表格，品类/品牌/关键词筛选 |
+
+> 以上页面默认 **1 分钟**自动刷新一次，通过前端 `setInterval` 实现轮询。
 
 ## 技术选型
 
