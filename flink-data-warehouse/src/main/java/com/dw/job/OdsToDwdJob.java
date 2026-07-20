@@ -67,7 +67,7 @@ public class OdsToDwdJob {
 
     private static KafkaSource<String> stringKafkaSource(String topic, String group) {
         return KafkaSource.<String>builder()
-                .setBootstrapServers("localhost:9092")
+                .setBootstrapServers(cfg.getProperty("kafka.bootstrap.servers", "localhost:9092"))
                 .setTopics(topic)
                 .setGroupId(group)
                 .setStartingOffsets(OffsetsInitializer.latest())
