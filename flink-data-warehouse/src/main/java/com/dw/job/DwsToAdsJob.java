@@ -29,7 +29,7 @@ public class DwsToAdsJob {
         String dbPass = cfg.getProperty("db.password");
 
         StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
-        env.setParallelism(2);
+        env.setParallelism(1);
         env.getCheckpointConfig().setCheckpointInterval(60_000); // 60s
 
         DataStream<Integer> ticks = env.addSource(new DwdToDwsJob.TickingSource(30_000)).name("tick-source").uid("tick-source");
