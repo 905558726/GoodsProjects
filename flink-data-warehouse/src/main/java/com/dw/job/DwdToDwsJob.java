@@ -67,6 +67,7 @@ public class DwdToDwsJob {
         public DwsRefreshSink(String url, String user, String pass) { this.url = url; this.user = user; this.pass = pass; }
 
         @Override public void open(Configuration p) throws Exception {
+            Class.forName("org.postgresql.Driver");
             conn = DriverManager.getConnection(url, user, pass);
             conn.setAutoCommit(false);
         }
